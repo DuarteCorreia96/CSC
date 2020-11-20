@@ -13,8 +13,10 @@ class SQL_Command {
 private:
 	std::string function, table;
 	std::vector<std::string> columns{};
+	std::vector<std::string> columns_type{};
 	
-	void parse_columns(std::vector<std::string> command_vector);
+	void to_uppercase( std::vector<std::string>& command_vector, unsigned __int64 index);
+	void rem_spec_char(std::vector<std::string> &command_vector, unsigned __int64 index);
 
 public:
 
