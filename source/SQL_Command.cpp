@@ -2,12 +2,18 @@
 
 
 SQL_Command::SQL_Command(std::string command) {
+    parse(command);
+}
 
+void
+SQL_Command::parse(std::string command) {
+
+    all_ok = false;
     sql_map_t funcMap = {
-        { "CREATE", &SQL_Command::create_table },
-        { "INSERT", &SQL_Command::insert_table },
-        { "DELETE", &SQL_Command::delete_from  },
-        { "SELECT", &SQL_Command::select       }
+    { "CREATE", &SQL_Command::create_table },
+    { "INSERT", &SQL_Command::insert_table },
+    { "DELETE", &SQL_Command::delete_from  },
+    { "SELECT", &SQL_Command::select       }
     };
 
     std::string token;
@@ -16,9 +22,9 @@ SQL_Command::SQL_Command(std::string command) {
     while (std::getline(tokenStream, token, ' ')) {
         command_vector.push_back(token);
     }
-    
+
     to_uppercase(command_vector, 0);
-    function = command_vector[0];    
+    function = command_vector[0];
     sql_map_t::iterator x = funcMap.find(function);
 
     if (x != funcMap.end()) {
@@ -27,7 +33,7 @@ SQL_Command::SQL_Command(std::string command) {
 
     if (all_ok) {
         std::cout << "\nCommand correctly parsed!\n" << std::endl;
-    } 
+    }
     else {
         std::cout << "\nCommand not valid!\n" << std::endl;
     }
@@ -55,28 +61,11 @@ SQL_Command::rem_spec_char(std::vector<std::string> &command_vector, unsigned __
 void 
 SQL_Command::select(std::vector<std::string> command_vector) {
 
-    to_uppercase(command_vector, 1);
-    if (command_vector[1].size() > 5 && command_vector[1].back() == ')') {  
-
-        if (command_vector[1].compare(0, 5, "MULT(") == 0) {
-
-            columns.push_back(command_vector[1].substr(5, command_vector[1].size() - 6));
-            std::cout << "Function:\t MULT" << std::endl << "Column:\t\t" << columns[0] << std::endl;
-        
-        }
-        else if (command_vector[1].compare(0, 4, "SUM(") == 0) {
-            
-            columns.push_back(command_vector[1].substr(4, command_vector[1].size() - 5));
-            std::cout << "Function:\t SUM" << std::endl << "Column:\t\t" << columns[0] << std::endl;
-        }
-    }
-    else {
-        std::cout << "Normal select function" << std::endl;
-    }
-
     std::string aux_str;
     unsigned __int64 from_index = 0;
     unsigned __int64 where_index = 0;
+
+    // Check if syntax is correct before parsing
     for (unsigned __int64 i = 0; i < command_vector.size(); i++) {
 
         aux_str = command_vector[i];
@@ -95,6 +84,30 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         return;
     }
 
+    to_uppercase(command_vector, 1);
+    if (command_vector[1].size() > 5 && command_vector[1].back() == ')') {  
+
+        if (command_vector[1].compare(0, 5, "MULT(") == 0) {
+
+            columns.push_back(command_vector[1].substr(5, command_vector[1].size() - 6));
+            select_function = '*';
+        
+        }
+        else if (command_vector[1].compare(0, 4, "SUM(") == 0) {
+            
+            columns.push_back(command_vector[1].substr(4, command_vector[1].size() - 5));
+            select_function = '+';
+        }
+    }
+    else {
+
+        for (unsigned __int64 i = 1; i < from_index; i++) {
+            rem_spec_char(command_vector, i);
+            columns.push_back(command_vector[i]);
+        }
+    }
+
+    // TODO IF ONLY 1 CONDITION
     to_uppercase(command_vector, where_index + 4);
     if (command_vector[where_index + 4].compare("OR") == 0) {
         operator_cond = '|';
@@ -140,10 +153,6 @@ SQL_Command::create_table(std::vector<std::string> command_vector) {
         columns_type.push_back(command_vector[index + 1]);
 
         index += 2;
-    }
-
-    for (unsigned __int64 i = 0; i < columns.size(); i++) {
-        std::cout << "Coluna:\t" << columns[i] << "\t Type:\t" << columns_type[i] << std::endl;
     }
 
     all_ok = true;

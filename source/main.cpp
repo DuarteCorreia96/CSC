@@ -3,37 +3,107 @@
 #include <vector>
 
 #include "SQL_Command.h"
+#include "test.h"
+#include <seal/seal.h>
 
+#include <fstream>
+#include <json/json.h>
+
+#include <gtest/gtest.h>
+#include <cstddef>
+#include <cstdint>
+
+#include <openssl/bio.h>
+
+#include "examples.h"
+
+#include <bitset>
 
 int main() {
 
-    std::string command  = "SELECT mult(coluna123) FROM table1 WHERE col1 > 10;";
-	std::string select_c = "SELECT col1, col2, col3 FROM tablename WHERE col1 > 2 AND col3 < 1";
-	std::string command2 = "CREATE TABLE tablename (col1name TEXT, col2name INT, col3name TEXT)";
-	std::string delete_c = "DELETE FROM tablename WHERE col1name = value1 OR col2name > value2";
-	std::string insert_c = "INSERT INTO TABLE tablename (col1, col2) VALUES (1, 2)";
+    seal::EncryptionParameters parms(seal::scheme_type::bfv);
 
-	std::string command_used = select_c;
-	SQL_Command function{ command_used };
+    size_t poly_modulus_degree = 4096;
+    parms.set_poly_modulus_degree(poly_modulus_degree);
+    parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(poly_modulus_degree));
+    parms.set_plain_modulus(1024);
 
-	if (not function.check_command()) {
-		return -1;
-	}
+    seal::SEALContext context(parms);
+    seal::KeyGenerator keygen(context);
+    seal::PublicKey public_key;
 
-	std::cout << "Function:\t" << function.get_function() << std::endl;
-	std::cout << "Table:   \t" << function.get_table()    << std::endl;
-	std::cout << "Operator:\t" << function.get_operator() << std::endl;
+    keygen.create_public_key(public_key);
+    auto secret_key = keygen.secret_key();
+    auto relin_keys = keygen.create_relin_keys();
 
-	function.get_condition1().print();
-	function.get_condition2().print();
+    seal::Encryptor encryptor(context, public_key);
+    seal::Evaluator evaluator(context);
+    seal::Decryptor decryptor(context, secret_key);
 
-	std::vector<std::string> columns = function.get_columns();
-	std::vector<std::string> columns_v = function.get_columns_values();
 
-	std::cout << "Colunas:" << std::endl;
-	for (unsigned __int64 i = 0; i < columns.size(); i++) {
-		std::cout << "Coluna:\t\t" << columns[i] << "\t Value:\t" << columns_v[i] << std::endl;
-	}
+    seal::Plaintext plain, out_plain;
+    seal::Ciphertext encrypted;
 
-	std::cout << std::endl <<command_used << std::endl;
+    std::string encoded = "testes";
+    
+    std::vector<int> test_vector;
+    std::vector<seal::Ciphertext> test_cipher_vec;
+
+    for (auto character : encoded) {
+
+        seal::Ciphertext aux_encrypted;
+        encryptor.encrypt(seal::Plaintext(std::to_string(character)), aux_encrypted);
+        test_cipher_vec.push_back(aux_encrypted);
+    }
+
+    std::string decoded = "";
+    decoded.resize(test_cipher_vec.size());
+    for (unsigned __int64 i = 0; i < test_cipher_vec.size(); i++) {
+
+        seal::Plaintext aux_plain;
+        decryptor.decrypt(test_cipher_vec[i], aux_plain);
+        decoded[i] = atoi(aux_plain.to_string().c_str());
+    }
+    
+    std::cout << "Encoded:\t" << encoded << std::endl;
+    std::cout << "Decoded:\t" << decoded << std::endl;
+
+    unsigned __int64 decimal = 1506;
+    const std::size_t bitset_size = 32;
+    std::string binary = std::bitset<bitset_size>(decimal).to_string(); //to binary
+    std::cout << binary << "\n";
+
+    decimal = std::bitset<bitset_size>(binary).to_ulong();
+    std::cout << decimal << "\n";
+
+
+
+    int x = 10001635443;
+    seal::Plaintext x_plain(std::to_string(x));
+    std::cout << "Express x = " + std::to_string(x) + " as a plaintext polynomial 0x" + x_plain.to_string() + "." << std::endl;
+
+    seal::Ciphertext x_encrypted_1;
+    encryptor.encrypt(x_plain, x_encrypted_1);
+
+    seal::Ciphertext x_encrypted_2;
+    encryptor.encrypt(x_plain, x_encrypted_2);
+
+    std::ofstream data_file1("data/test_1.txt", std::ios::binary);
+    std::ofstream data_file2("data/test_2.txt", std::ios::binary);
+
+    x_encrypted_1.save(data_file1);
+    x_encrypted_2.save(data_file2);
+
 }
+
+//seal::Ciphertext loadCiphertext(std::string filename, seal::EncryptionParameters parms) {
+//
+//    seal::SEALContext context(parms);
+//
+//    std::ifstream ct;
+//    ct.open(filename, std::ios::binary);
+//    seal::Ciphertext result;
+//    result.load(context, ct);
+//
+//    return result;
+//};

@@ -40,6 +40,7 @@ private:
 	SQL_Condition parse_condition(std::vector<std::string> command_vector, unsigned __int64 start_index);
 
 	char operator_cond = '\0';
+	char select_function = '\0';
 	
 	void to_uppercase_str(std::string& aux_string);
 	void to_uppercase( std::vector<std::string>& command_vector, unsigned __int64 index);
@@ -51,6 +52,12 @@ public:
 
 	SQL_Command(std::string command);
 
+	void parse(std::string command);
+	void select(std::vector<std::string> command_vector);
+	void create_table(std::vector<std::string> command_vector);
+	void insert_table(std::vector<std::string> command_vector);
+	void delete_from (std::vector<std::string> command_vector);
+
 	std::vector <std::string> get_columns() { return columns; };
 	std::vector <std::string> get_columns_values() { return columns_values; };
 	std::string get_function() { return function; }
@@ -60,11 +67,6 @@ public:
 	SQL_Condition get_condition1() { return condition1; };
 	SQL_Condition get_condition2() { return condition2; };
 	
-	void select(std::vector<std::string> command_vector);
-	void create_table(std::vector<std::string> command_vector);
-	void insert_table(std::vector<std::string> command_vector);
-	void delete_from (std::vector<std::string> command_vector);
-
 	bool check_command() { return all_ok; }
 };
 
