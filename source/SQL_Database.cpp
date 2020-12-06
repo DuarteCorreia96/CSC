@@ -39,7 +39,7 @@ void SQL_Database::or_inplace(seal::Ciphertext &encrypted_1, seal::Ciphertext &e
 	not_(encrypted_2, aux_2);
 
 	evaluator.multiply(aux_1, aux_2, encrypted_1);
-	relinearize_(encrypted_1);
+	evaluator.relinearize_inplace(encrypted_1, relin_keys);
 	not_inplace(encrypted_1);
 
 }
@@ -63,15 +63,6 @@ void SQL_Database::compare(
 
 	relinearize_(great);
 	relinearize_(lesst);
-
-	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(great) << " bits" << endl;
-
-	seal::Plaintext great_p, lesst_p;
-	decryptor.decrypt(great, great_p);
-	decryptor.decrypt(lesst, lesst_p);
-
-	//cout << "Greater   :\t" << great_p.to_string() << endl;
-	//cout << "Less than :\t" << lesst_p.to_string() << endl;
 
 	for (__int64 i = n_bits - 2; i >= 0; i--) {
 
@@ -98,16 +89,12 @@ void SQL_Database::compare(
 		or_inplace(great, great_i);
 		or_inplace(lesst, lesst_i);
 		cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(great) << " bits" << endl;
-
-		seal::Plaintext great_p, lesst_p;
-		decryptor.decrypt(great, great_p);
-		decryptor.decrypt(lesst, lesst_p);
-
-
-		//cout << "Greater   :\t" << great_p.to_string() << endl;
-		//cout << "Less than :\t" << lesst_p.to_string() << endl;
 	}
 
-	evaluator.multiply(great, lesst, equal);
+	not_(great, not_great);
+	not_(lesst, not_lesst);
+
+	evaluator.multiply(not_great, not_lesst, equal);
 	evaluator.relinearize_inplace(equal, relin_keys);
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(equal) << " bits" << endl;
 }

@@ -18,10 +18,10 @@
 
 void test_func() {
 
-	int x = 5;
+	int x = 4;
 	int y = 4;
 
-	const unsigned __int64 n_bits = 8;
+	const unsigned __int64 n_bits = 4;
 
 	auto x_bin = std::bitset<n_bits>(x);
 	auto y_bin = std::bitset<n_bits>(y);
@@ -57,10 +57,10 @@ void test_func() {
 
 	cout << y << endl;
 
-	uint64_t plain_modulus = 256;
+	uint64_t plain_modulus = 16;
 	seal::EncryptionParameters parms(seal::scheme_type::bfv);
 
-	size_t poly_modulus_degree = 16384;
+	size_t poly_modulus_degree = 8192;
 	parms.set_poly_modulus_degree(poly_modulus_degree);
 	parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(poly_modulus_degree));
 	parms.set_plain_modulus(plain_modulus);
@@ -80,7 +80,11 @@ void test_func() {
 
 	std::vector<seal::Ciphertext> x_vec_enc{};
 	std::vector<seal::Ciphertext> y_vec_enc{};
-	for (auto character : x_bin.to_string()) {
+
+	auto  x_str = x_bin.to_string();
+	for (size_t i = 0; i < x_str.size(); i++) {
+
+		auto character = std::string(1, x_str.c_str()[i]);
 
 		cout << character;
 		seal::Ciphertext aux_encrypted;
@@ -89,7 +93,10 @@ void test_func() {
 	}
 	cout << endl;
 
-	for (auto character : y_bin.to_string()) {
+	auto  y_str = y_bin.to_string();
+	for (size_t i = 0; i < y_str.size(); i++) {
+
+		auto character = std::string(1, y_str.c_str()[i]);
 
 		cout << character;
 		seal::Ciphertext aux_encrypted;
@@ -102,17 +109,20 @@ void test_func() {
 
 	database.compare(x_vec_enc, y_vec_enc, n_bits);
 
-	cout << "here " << endl;
-
 	seal::Plaintext great_p, lesst_p, equal_p;
 
 	decryptor.decrypt(database.get_great(), great_p);
 	decryptor.decrypt(database.get_lesst(), lesst_p);
 	decryptor.decrypt(database.get_equal(), equal_p);
 
-	//cout << "Greater   :\t" << great_p.to_string() << endl;
-	//cout << "Less than :\t" << lesst_p.to_string() << endl;
-	//cout << "Equal     :\t" << equal_p.to_string() << endl;
+	if (decryptor.invariant_noise_budget(database.get_great()) > 0)
+		cout << "Greater   :\t" << great_p.to_string() << endl;
+
+	if (decryptor.invariant_noise_budget(database.get_lesst()) > 0) 
+		cout << "Less than :\t" << lesst_p.to_string() << endl;
+
+	if (decryptor.invariant_noise_budget(database.get_equal()) > 0) 
+		cout << "Equal     :\t" << equal_p.to_string() << endl;
 
 }
 

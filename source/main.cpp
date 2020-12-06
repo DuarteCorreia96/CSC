@@ -29,9 +29,9 @@ using namespace seal;
 
 int main() {
 
-    //test_func();
+    test_func();
     //  example_bfv_basics();
-    test_relin();
+    //test_relin();
 
 }
 
