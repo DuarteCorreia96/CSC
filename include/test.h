@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <seal/seal.h>
 #include <iomanip>
 
 #include "SQL_Command.h"
@@ -11,6 +12,111 @@
 
 #include <fstream>
 #include <json/json.h>
+#include <bitset>
+
+#include "SQL_Database.h"
+
+void test_func() {
+
+	int x = 5;
+	int y = 4;
+
+	const unsigned __int64 n_bits = 8;
+
+	auto x_bin = std::bitset<n_bits>(x);
+	auto y_bin = std::bitset<n_bits>(y);
+
+	bool lesst, great, equal;
+
+	// Version of only NOT and AND
+	lesst = !x_bin[n_bits - 1] &&  y_bin[n_bits - 1];
+	great =  x_bin[n_bits - 1] && !y_bin[n_bits - 1];
+	for (__int64 i = n_bits - 2; i >= 0; i--) {
+
+		lesst = !(!(!great && (!x_bin[i] &&  y_bin[i])) && !lesst);
+		great = !(!(!lesst && ( x_bin[i] && !y_bin[i])) && !great);
+	}
+	equal = !lesst && !great;
+
+	// Version of only NOT and OR
+	lesst = !( x_bin[n_bits - 1] || !y_bin[n_bits - 1]);
+	great = !(!x_bin[n_bits - 1] ||  y_bin[n_bits - 1]);
+	for (__int64 i = n_bits - 2; i >= 0; i--) {
+
+		lesst = !(great || ( x_bin[i] || !y_bin[i])) || lesst;
+		great = !(lesst || (!x_bin[i] ||  y_bin[i])) || great;
+	}
+	equal = !(lesst || great);
+
+	using namespace std;
+	cout << x;
+
+	if      (lesst) { cout << " < "; } 
+	else if (great) { cout << " > "; } 
+	else if (equal) { cout << " = "; }
+
+	cout << y << endl;
+
+	uint64_t plain_modulus = 256;
+	seal::EncryptionParameters parms(seal::scheme_type::bfv);
+
+	size_t poly_modulus_degree = 16384;
+	parms.set_poly_modulus_degree(poly_modulus_degree);
+	parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(poly_modulus_degree));
+	parms.set_plain_modulus(plain_modulus);
+
+	seal::SEALContext context(parms);
+	seal::KeyGenerator keygen(context);
+	seal::PublicKey public_key;
+	seal::RelinKeys relin_keys;
+
+	keygen.create_public_key(public_key);
+	seal::SecretKey secret_key = keygen.secret_key();
+	keygen.create_relin_keys(relin_keys);
+
+	seal::Encryptor encryptor(context, public_key);
+	seal::Evaluator evaluator(context);
+	seal::Decryptor decryptor(context, secret_key);
+
+	std::vector<seal::Ciphertext> x_vec_enc{};
+	std::vector<seal::Ciphertext> y_vec_enc{};
+	for (auto character : x_bin.to_string()) {
+
+		cout << character;
+		seal::Ciphertext aux_encrypted;
+		encryptor.encrypt(seal::Plaintext(character), aux_encrypted);
+		x_vec_enc.push_back(aux_encrypted);
+	}
+	cout << endl;
+
+	for (auto character : y_bin.to_string()) {
+
+		cout << character;
+		seal::Ciphertext aux_encrypted;
+		encryptor.encrypt(seal::Plaintext(character), aux_encrypted);
+		y_vec_enc.push_back(aux_encrypted);
+	}
+	cout << endl;
+
+	SQL_Database database(context, relin_keys, secret_key);
+
+	database.compare(x_vec_enc, y_vec_enc, n_bits);
+
+	cout << "here " << endl;
+
+	seal::Plaintext great_p, lesst_p, equal_p;
+
+	decryptor.decrypt(database.get_great(), great_p);
+	decryptor.decrypt(database.get_lesst(), lesst_p);
+	decryptor.decrypt(database.get_equal(), equal_p);
+
+	//cout << "Greater   :\t" << great_p.to_string() << endl;
+	//cout << "Less than :\t" << lesst_p.to_string() << endl;
+	//cout << "Equal     :\t" << equal_p.to_string() << endl;
+
+}
+
+
 
 
 void test_json() {
@@ -76,5 +182,94 @@ int test_SQL_Command() {
 	std::cout << std::endl <<command_used << std::endl;
 
 	return 0;
+}
+
+void test_relin() {
+
+	using namespace std;
+	using namespace seal;
+	uint64_t plain_modulus = 1024;
+	seal::EncryptionParameters parms(seal::scheme_type::bfv);
+
+	size_t poly_modulus_degree = 8192;
+	parms.set_poly_modulus_degree(poly_modulus_degree);
+	parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(poly_modulus_degree));
+	parms.set_plain_modulus(plain_modulus);
+
+	seal::SEALContext context(parms);
+	seal::KeyGenerator keygen(context);
+	seal::PublicKey public_key;
+	seal::RelinKeys relin_keys;
+
+	keygen.create_public_key(public_key);
+	seal::SecretKey secret_key = keygen.secret_key();
+	keygen.create_relin_keys(relin_keys);
+
+	seal::Encryptor encryptor(context, public_key);
+	seal::Evaluator evaluator(context);
+	seal::Decryptor decryptor(context, secret_key);
+
+	seal::Ciphertext x_enc, y_enc;
+	seal::Plaintext  x("3"), y("5");
+
+	encryptor.encrypt(x, x_enc);
+	cout << "Com relinearizacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.add_inplace(x_enc, x_enc);
+	cout << "  + Soma:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.relinearize_inplace(x_enc, relin_keys);
+	cout << "  + Re-linearizacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.relinearize_inplace(x_enc, relin_keys);
+	cout << "  + Re-linearizacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.relinearize_inplace(x_enc, relin_keys);
+	cout << "  + Re-linearizacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	encryptor.encrypt(x, x_enc);
+	cout << "\nSem relinearizacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
+
+	evaluator.multiply_inplace(x_enc, x_enc);
+	cout << "  + Multiplicacao:" << endl;
+	cout << "    + noise budget in encrypted_result: " << decryptor.invariant_noise_budget(x_enc) << " bits " << endl;
+	cout << "    + size of encrypted_result: " << x_enc.size() << endl;
 }
 

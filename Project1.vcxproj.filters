@@ -24,6 +24,9 @@
     <ClInclude Include="include\test.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\SQL_Database.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -32,7 +35,10 @@
     <ClCompile Include="source\SQL_Command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\4_ckks_basics.cpp">
+    <ClCompile Include="source\SQL_Database.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\1_bfv_basics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -149,12 +149,14 @@
   <ItemGroup>
     <ClInclude Include="include\examples.h" />
     <ClInclude Include="include\SQL_Command.h" />
+    <ClInclude Include="include\SQL_Database.h" />
     <ClInclude Include="include\test.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\4_ckks_basics.cpp" />
+    <ClCompile Include="source\1_bfv_basics.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\SQL_Command.cpp" />
+    <ClCompile Include="source\SQL_Database.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
