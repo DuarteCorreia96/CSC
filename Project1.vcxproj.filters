@@ -27,6 +27,15 @@
     <ClInclude Include="include\SQL_Database.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\archive.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SQL_Client.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Definitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
@@ -39,6 +48,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\1_bfv_basics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\SQL_Client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

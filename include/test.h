@@ -15,52 +15,20 @@
 #include <bitset>
 
 #include "SQL_Database.h"
+#include "SQL_Client.h"
 
 void test_func() {
 
-	int x = 4;
-	int y = 4;
+	int x = 30;
+	int y = 46;
+	char operation = '>';
 
-	const unsigned __int64 n_bits = 4;
+	const unsigned __int64 n_bits = 12;
 
-	auto x_bin = std::bitset<n_bits>(x);
-	auto y_bin = std::bitset<n_bits>(y);
-
-	bool lesst, great, equal;
-
-	// Version of only NOT and AND
-	lesst = !x_bin[n_bits - 1] &&  y_bin[n_bits - 1];
-	great =  x_bin[n_bits - 1] && !y_bin[n_bits - 1];
-	for (__int64 i = n_bits - 2; i >= 0; i--) {
-
-		lesst = !(!(!great && (!x_bin[i] &&  y_bin[i])) && !lesst);
-		great = !(!(!lesst && ( x_bin[i] && !y_bin[i])) && !great);
-	}
-	equal = !lesst && !great;
-
-	// Version of only NOT and OR
-	lesst = !( x_bin[n_bits - 1] || !y_bin[n_bits - 1]);
-	great = !(!x_bin[n_bits - 1] ||  y_bin[n_bits - 1]);
-	for (__int64 i = n_bits - 2; i >= 0; i--) {
-
-		lesst = !(great || ( x_bin[i] || !y_bin[i])) || lesst;
-		great = !(lesst || (!x_bin[i] ||  y_bin[i])) || great;
-	}
-	equal = !(lesst || great);
-
-	using namespace std;
-	cout << x;
-
-	if      (lesst) { cout << " < "; } 
-	else if (great) { cout << " > "; } 
-	else if (equal) { cout << " = "; }
-
-	cout << y << endl;
-
-	uint64_t plain_modulus = 16;
+	uint64_t plain_modulus = 4096;
 	seal::EncryptionParameters parms(seal::scheme_type::bfv);
 
-	size_t poly_modulus_degree = 8192;
+	size_t poly_modulus_degree = 32768;
 	parms.set_poly_modulus_degree(poly_modulus_degree);
 	parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(poly_modulus_degree));
 	parms.set_plain_modulus(plain_modulus);
@@ -78,52 +46,26 @@ void test_func() {
 	seal::Evaluator evaluator(context);
 	seal::Decryptor decryptor(context, secret_key);
 
-	std::vector<seal::Ciphertext> x_vec_enc{};
-	std::vector<seal::Ciphertext> y_vec_enc{};
 
-	auto  x_str = x_bin.to_string();
-	for (size_t i = 0; i < x_str.size(); i++) {
+	SQL_Client client(context, public_key, secret_key);
 
-		auto character = std::string(1, x_str.c_str()[i]);
-
-		cout << character;
-		seal::Ciphertext aux_encrypted;
-		encryptor.encrypt(seal::Plaintext(character), aux_encrypted);
-		x_vec_enc.push_back(aux_encrypted);
-	}
-	cout << endl;
-
-	auto  y_str = y_bin.to_string();
-	for (size_t i = 0; i < y_str.size(); i++) {
-
-		auto character = std::string(1, y_str.c_str()[i]);
-
-		cout << character;
-		seal::Ciphertext aux_encrypted;
-		encryptor.encrypt(seal::Plaintext(character), aux_encrypted);
-		y_vec_enc.push_back(aux_encrypted);
-	}
-	cout << endl;
+	std::vector<seal::Ciphertext> x_vec_enc = client.encrypt_int_bin(x);
+	std::vector<seal::Ciphertext> y_vec_enc = client.encrypt_int_bin(y);
 
 	SQL_Database database(context, relin_keys, secret_key);
 
-	database.compare(x_vec_enc, y_vec_enc, n_bits);
+	seal::Ciphertext op_encry;
+	seal::Plaintext  op_plain;
+	op_encry = database.compare(x_vec_enc, y_vec_enc, operation);
 
-	seal::Plaintext great_p, lesst_p, equal_p;
+	using namespace std;
 
-	decryptor.decrypt(database.get_great(), great_p);
-	decryptor.decrypt(database.get_lesst(), lesst_p);
-	decryptor.decrypt(database.get_equal(), equal_p);
-
-	if (decryptor.invariant_noise_budget(database.get_great()) > 0)
-		cout << "Greater   :\t" << great_p.to_string() << endl;
-
-	if (decryptor.invariant_noise_budget(database.get_lesst()) > 0) 
-		cout << "Less than :\t" << lesst_p.to_string() << endl;
-
-	if (decryptor.invariant_noise_budget(database.get_equal()) > 0) 
-		cout << "Equal     :\t" << equal_p.to_string() << endl;
-
+	decryptor.decrypt(op_encry, op_plain);
+	cout << x << operation << y << " is: ";
+	if      (op_plain.to_string().compare("1") == 0) { cout << "TRUE";  }
+	else if (op_plain.to_string().compare("0") == 0) { cout << "FALSE"; }
+	else { cout << "Something went terribly wrong"; }
+	cout << endl;
 }
 
 
