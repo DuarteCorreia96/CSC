@@ -150,6 +150,7 @@
     <ClInclude Include="include\archive.h" />
     <ClInclude Include="include\Definitions.h" />
     <ClInclude Include="include\examples.h" />
+    <ClInclude Include="include\seal_utilities_extra.h" />
     <ClInclude Include="include\SQL_Client.h" />
     <ClInclude Include="include\SQL_Command.h" />
     <ClInclude Include="include\SQL_Database.h" />

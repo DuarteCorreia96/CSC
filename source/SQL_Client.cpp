@@ -1,5 +1,10 @@
 #include "SQL_Client.h"
 
+#include <vector>
+#include <seal/seal.h>
+#include <bitset>
+#include <string>
+
 std::vector<seal::Ciphertext> SQL_Client::encrypt_int_bin(__int64 x) {
 
 	std::vector<seal::Ciphertext> x_vec_enc{};
@@ -26,3 +31,4 @@ seal::Ciphertext SQL_Client::encrypt_int(__int64 x) {
 
 	return x_enc;
 }
+

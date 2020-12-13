@@ -1,5 +1,13 @@
 #include "SQL_Command.h"
 
+#include <iostream>
+#include <stdlib.h>    
+#include <string>
+
+#include <sstream>
+#include <algorithm>
+#include <fstream>
+
 
 SQL_Command::SQL_Command(std::string command) {
     parse(command);
@@ -8,13 +16,7 @@ SQL_Command::SQL_Command(std::string command) {
 void
 SQL_Command::parse(std::string command) {
 
-    all_ok = false;
-    sql_map_t funcMap = {
-    { "CREATE", &SQL_Command::create_table },
-    { "INSERT", &SQL_Command::insert_table },
-    { "DELETE", &SQL_Command::delete_from  },
-    { "SELECT", &SQL_Command::select       }
-    };
+    command_json["valid"] = false;
 
     std::string token;
     std::istringstream tokenStream(command);
@@ -24,14 +26,14 @@ SQL_Command::parse(std::string command) {
     }
 
     to_uppercase(command_vector, 0);
-    function = command_vector[0];
+    std::string function = command_vector[0];
     sql_map_t::iterator x = funcMap.find(function);
 
     if (x != funcMap.end()) {
         (this->*(x->second))(command_vector);
     }
 
-    if (all_ok) {
+    if (command_json["valid"].asBool()) {
         std::cout << "\nCommand correctly parsed!\n" << std::endl;
     }
     else {
@@ -79,83 +81,73 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         }
     }
 
-    if (not from_index || (where_index and not (command_vector.size() == where_index + 4 || command_vector.size() == where_index + 8))) {
+    if (not from_index) {
         std::cout << "Function not valid!" << std::endl;
         return;
     }
 
     to_uppercase(command_vector, 1);
-    if (command_vector[1].size() > 5 && command_vector[1].back() == ')') {  
-
-        if (command_vector[1].compare(0, 5, "MULT(") == 0) {
-
-            columns.push_back(command_vector[1].substr(5, command_vector[1].size() - 6));
-            select_function = '*';
-        
-        }
-        else if (command_vector[1].compare(0, 4, "SUM(") == 0) {
+    if (command_vector[1].size() > 5 && command_vector[1].compare(0, 4, "SUM(") == 0 && command_vector[1].back() == ')') {
             
-            columns.push_back(command_vector[1].substr(4, command_vector[1].size() - 5));
-            select_function = '+';
+        command_json["columns"][0] = command_vector[1].substr(4, command_vector[1].size() - 5);
+        command_json["secondary"] = "SUM";
+
+    }
+    else if (command_vector[1].compare("LINE") == 0) {
+
+        if (command_vector.size() > 5) {
+            return;
         }
+
+        command_json["secondary"] = "LINE";
+        try {
+            command_json["linenum"] = std::stoi(command_vector[2]);
+        }
+        catch (std::exception e) { return; }
     }
     else {
 
-        for (unsigned __int64 i = 1; i < from_index; i++) {
+        command_json["secondary"] = Json::nullValue;
+        for (int i = 1; i < from_index; i++) {
+
             rem_spec_char(command_vector, i);
-            columns.push_back(command_vector[i]);
+            command_json["columns"][i - 1] = command_vector[i];
         }
     }
 
-    // TODO IF ONLY 1 CONDITION
-    to_uppercase(command_vector, where_index + 4);
-    if (command_vector[where_index + 4].compare("OR") == 0) {
-        operator_cond = '|';
-    }
-    else if (command_vector[where_index + 4].compare("AND") == 0) {
-        operator_cond = '&';
-    }
-    else {
-        std::cout << "Function not valid!" << std::endl;
-        return;
+    if (where_index) {
+
+        command_json["where"] = parse_conditions(command_vector, where_index);
+        if (not command_json["where"]["valid"].asBool()) { return; }
     }
 
-    table = command_vector[from_index + 1];
-    condition1 = parse_condition(command_vector, where_index + 1);
-    condition2 = parse_condition(command_vector, where_index + 5);
-    all_ok = true;
+    command_json["primary"] = "SELECT";
+    command_json["table"] = command_vector[from_index + 1];
+    command_json["valid"] = true;
 }
 
 void
 SQL_Command::create_table(std::vector<std::string> command_vector) {
 
     to_uppercase(command_vector, 1);
-    if (command_vector[1].compare("TABLE") != 0 || command_vector.size() < 5 || command_vector.size() % 2 != 1) {
+    if (command_vector[1].compare("TABLE") != 0 || command_vector.size() < 4 ||
+        command_vector[3][0] != '(' || command_vector[command_vector.size()-1].back() != ')') {
         std::cout << "Function not valid!" << std::endl;
         return;
     }
 
-    table = command_vector[2];
-
-    unsigned __int64 index = 3;
+    int index = 3;
     while (command_vector.size() > index) {
 
-        to_uppercase( command_vector, index + 1);
-        rem_spec_char(command_vector, index + 1);
-        if (command_vector[index + 1].compare("INT") != 0 && command_vector[index + 1].compare("TEXT") != 0) {
-            std::cout << "Column type not valid! MUST be 'INT' or 'TEXT'!" << std::endl;
-            return;
-        }
-
         rem_spec_char(command_vector, index);
+        command_json["columns"][index - 3] = command_vector[index];
 
-        columns.push_back(command_vector[index]);
-        columns_type.push_back(command_vector[index + 1]);
-
-        index += 2;
+        index++;
     }
 
-    all_ok = true;
+    command_json["primary"] = "CREATE";
+    command_json["table"] = command_vector[2];
+    command_json["valid"] = true;
 }
 
 void
@@ -169,83 +161,122 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         return;
     }
 
-    table = command_vector[3];
 
-    std::string aux_str = "";
-    bool values = false;
-    unsigned __int64 index = 4;
-    while (command_vector.size() > index) {
+    int values_index = 0;
+    for (int i = 4; i < command_vector.size(); i++) {
 
-        aux_str = command_vector[index];
+        std::string aux_str = command_vector[i];
         to_uppercase_str(aux_str);
         if (aux_str.compare("VALUES") == 0) {
 
-            values = true;
-            index++;
-            continue;
+            values_index = i;
+            break;
         }
-        
-        rem_spec_char(command_vector, index);
-        if (not values) {
-            columns.push_back(command_vector[index]);
-        } 
-        else {
-            columns_values.push_back(command_vector[index]);
-        }
-
-        index++;
     }
 
-    if (not values || columns.size() != columns_values.size()) {
+    int column_size = values_index - 4;
+    int values_size = command_vector.size() - values_index - 1;
+    if (not values_index || column_size != values_size) {
         std::cout << "Missing Values! Function not valid!" << std::endl;
         return;
     }
 
-    all_ok = true;
+    for (int i = 4, j = 0; i < values_index; i++, j++) {
+
+        rem_spec_char(command_vector, i);
+        command_json["columns"][j] = command_vector[i];
+    }
+
+    for (int i = values_index + 1, j = 0; i < command_vector.size(); i++, j++) {
+        try {
+
+            rem_spec_char(command_vector, i);
+            command_json["values"][j] = std::stoi(command_vector[i]);
+        }
+        catch (std::exception e) { return; }
+    }
+
+    command_json["primary"] = "INSERT";
+    command_json["table"] = command_vector[3];
+    command_json["valid"] = true;
 }
 
 void
 SQL_Command::delete_from(std::vector<std::string> command_vector) {
     
-    to_uppercase(command_vector, 1);
-    to_uppercase(command_vector, 3);
-    if ((command_vector.size() != 7 && command_vector.size() != 11) ||
-        command_vector[1].compare("FROM") != 0 || command_vector[3].compare("WHERE")) {
-        std::cout << "Function not valid!" << std::endl;
-        return;
-    }
-    
-    to_uppercase(command_vector, 7);
-    if (command_vector[7].compare("OR") == 0) {
-        operator_cond = '|';
-    }
-    else if (command_vector[7].compare("AND") == 0) {
-        operator_cond = '&';
-    }
-    else {
+    to_uppercase(command_vector, 2);
+    if (command_vector.size() != 4 || command_vector[2].compare("FROM") != 0) {
         std::cout << "Function not valid!" << std::endl;
         return;
     }
 
-    table = command_vector[2];
-    condition1 = parse_condition(command_vector, 4);
-    condition2 = parse_condition(command_vector, 8);
-    all_ok = true;
+    try {
+        command_json["linenum"] = std::stoi(command_vector[1]);
+    }
+    catch (std::exception e) { return; }
+
+    command_json["primary"] = "DELETE";
+    command_json["table"] = command_vector[3];
+    command_json["valid"] = true;
 }
 
-SQL_Condition
-SQL_Command::parse_condition(std::vector<std::string> command_vector, unsigned __int64 start_index) {
+Json::Value
+SQL_Command::parse_conditions(std::vector<std::string> command_vector, unsigned __int64 where_index) {
 
-    SQL_Condition new_condition;
-    if (command_vector.size() < start_index + 2 || command_vector[start_index + 1].size() != 1 || 
-        !command_vector[start_index + 1].find_first_not_of("<>=")) {
-        std::cout << "Conditon not valid" << std::endl;
-        return new_condition;
+    Json::Value conditions;
+    conditions["valid"] = false;
+
+    bool cond_1 = command_vector.size() == where_index + 4;
+    bool cond_2 = command_vector.size() == where_index + 8;
+    if (where_index and not (cond_1 || cond_2)) {
+        return conditions;
     }
 
-    new_condition.variable  = command_vector[start_index];
-    new_condition.operation = command_vector[start_index + 1][0];
-    new_condition.value     = command_vector[start_index + 2];
+    if (cond_1 || cond_2) {
 
-    return new_condition;
+        if (command_vector[where_index + 2].size() != 1 || !command_vector[where_index + 2].find_first_not_of("<>=")) {
+            return conditions;
+        }
+
+        conditions["condition_1"]["variable"]  = command_vector[where_index + 1];
+        conditions["condition_1"]["operation"] = command_vector[where_index + 2][0];
+
+        try {
+            conditions["condition_1"]["value"] = std::stoi(command_vector[where_index + 3]);
+        }
+        catch (std::exception e) { return conditions; }
+    }
+
+    if (cond_2) {
+        to_uppercase(command_vector, where_index + 4);
+        if (command_vector[where_index + 4].compare("OR") == 0) {
+            conditions["junction"] = "OR";
+        }
+        else if (command_vector[where_index + 4].compare("AND") == 0) {
+            conditions["junction"] = "AND";
+        }
+        else {
+            return conditions;
+        }
+
+        if (command_vector[where_index + 6].size() != 1 || !command_vector[where_index + 6].find_first_not_of("<>=")) {
+            return conditions;
+        }
+
+        conditions["condition_2"]["variable"]  = command_vector[where_index + 5];
+        conditions["condition_2"]["operation"] = command_vector[where_index + 6][0];
+
+        try {
+            conditions["condition_2"]["value"] = std::stoi(command_vector[where_index + 7]);
+        }
+        catch (std::exception e) { return conditions; }
+
+    }
+    else {
+        conditions["condition_2"] = Json::nullValue;
+        conditions["junction"]    = Json::nullValue;
+    }
+
+    conditions["valid"] = true;
+    return conditions;
 }

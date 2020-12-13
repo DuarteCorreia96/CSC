@@ -1,25 +1,16 @@
 #pragma once
-#include <iostream>
+
+#include "Definitions.h"
+
 #include <string>
-#include <sstream>
 #include <vector>
-#include <algorithm>
-#include <map> 
-#include <cctype>
-#include <regex>
+#include <map>
+#include <json/json.h>
 
-/// <summary>
-/// Struct used to save a SQL condition.
-/// </summary>
-/// <member name="operation"> </member>
-struct SQL_Condition {
+class SQL_Command;
+typedef void (SQL_Command::* sql_t)(std::vector<std::string> command_vector);
+typedef std::map<std::string, sql_t> sql_map_t;
 
-	char operation = '\0';
-	std::string variable;
-	std::string value;
-
-	void print() { std::cout << "Condition: \t" << variable << " " << operation << " " << value << std::endl; };
-};
 
 /// <summary> 
 /// <para> <c>SQL_Command</c> is used to parse a SQL command! </para> 
@@ -29,21 +20,21 @@ struct SQL_Condition {
 class SQL_Command {
 
 private:
+	
+	Json::Value command_json;
 
-	std::string function, table;
-	std::vector<std::string> columns{};
-	std::vector<std::string> columns_type{};
-	std::vector<std::string> columns_values{};
+	sql_map_t funcMap = {
+		{ "CREATE", &SQL_Command::create_table },
+		{ "INSERT", &SQL_Command::insert_table },
+		{ "DELETE", &SQL_Command::delete_from  },
+		{ "SELECT", &SQL_Command::select       }
+	};
 
-	SQL_Condition condition1;
-	SQL_Condition condition2;
-	SQL_Condition parse_condition(std::vector<std::string> command_vector, unsigned __int64 start_index);
 
-	char operator_cond = '\0';
-	char select_function = '\0';
+	Json::Value parse_conditions(std::vector<std::string> command_vector, unsigned __int64 start_index);
 	
 	void to_uppercase_str(std::string& aux_string);
-	void to_uppercase( std::vector<std::string>& command_vector, unsigned __int64 index);
+	void to_uppercase( std::vector<std::string> &command_vector, unsigned __int64 index);
 	void rem_spec_char(std::vector<std::string> &command_vector, unsigned __int64 index);	
 
 	bool all_ok = false;
@@ -57,19 +48,11 @@ public:
 	void create_table(std::vector<std::string> command_vector);
 	void insert_table(std::vector<std::string> command_vector);
 	void delete_from (std::vector<std::string> command_vector);
-
-	std::vector <std::string> get_columns() { return columns; };
-	std::vector <std::string> get_columns_values() { return columns_values; };
-	std::string get_function() { return function; }
-	std::string get_table() { return table; }
-	char get_operator() { return operator_cond; };
-
-	SQL_Condition get_condition1() { return condition1; };
-	SQL_Condition get_condition2() { return condition2; };
 	
+	Json::Value get_command_json() { return command_json; };
+
 	bool check_command() { return all_ok; }
 };
 
-typedef void (SQL_Command::* sql_t)(std::vector<std::string> command_vector);
-typedef std::map<std::string, sql_t> sql_map_t;
+
 

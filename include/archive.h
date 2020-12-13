@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Definitions.h"
+
 #include <bitset>
-#include <string>
-#include <vector>
 #include <iostream>
 
 void compare_testing() {

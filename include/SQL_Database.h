@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Definitions.h"
+
 #include <seal/seal.h>
+#include <vector>
 
 class SQL_Database {
 

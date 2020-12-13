@@ -1,5 +1,6 @@
 #include "SQL_Database.h"
-#include <seal/seal.h>
+
+#include <iostream>
 
 void SQL_Database::not_inplace(seal::Ciphertext &encrypted) {
 
