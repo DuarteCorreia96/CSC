@@ -22,12 +22,17 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 
+#include "admin.h"
+
 
 
 using namespace std;
 using namespace seal;
 
 int main() {
+
+	int a = 1;
+	admistrator(a);
 
 	test_func();
 	//uint64_t plain_modulus = 16;
