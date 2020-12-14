@@ -16,20 +16,18 @@ int main() {
 	test_SQL_Command();
 
 	//test_func();
-	/*seal::EncryptionParameters parms(seal::scheme_type::bfv);
-
-	parms.set_poly_modulus_degree(POLY_MOD_DEG);
-	parms.set_coeff_modulus(seal::CoeffModulus::BFVDefault(POLY_MOD_DEG));
-	parms.set_plain_modulus(PLAIN_MOD);
 
 	std::string client_name = "admin";
 
-	seal::SEALContext context(parms);
+	// If you need to generate new keys
+	// create_keys(client_name);
+
+	seal::SEALContext context  = init_SEAL_Context();
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
 	seal::RelinKeys relin_keys = load_SEAL_relin(context, client_name);
 
-	SQL_Client client("admin", context, public_key, secret_key);
+	SQL_Client client(client_name, context, public_key, secret_key);
 
 	seal::Encryptor encryptor(context, public_key);
 	seal::Decryptor decryptor(context, secret_key);
@@ -96,7 +94,7 @@ int main() {
 	decryptor.decrypt(y2, p2);
 
 	cout << p1.to_string() << endl;
-	cout << p2.to_string() << endl;*/
+	cout << p2.to_string() << endl;
 }
 
  

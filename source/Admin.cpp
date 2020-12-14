@@ -1,4 +1,5 @@
-
+#include <string>
+#include <iostream>
 
 void admistrator(int tot_clients) {
 
@@ -9,9 +10,9 @@ void admistrator(int tot_clients) {
 	//put in a function
 	//distribute the certificates
 	for (int n_client = 1; n_client <= tot_clients; n_client++) {
-		string command = "copy ..\\CA\\CA-cert.pem ..\\client";
+		std::string command = "copy ..\\CA\\CA-cert.pem ..\\client";
 		command = command + std::to_string(n_client);
-		cout << command << endl;
+		std::cout << command << std::endl;
 		system(command.c_str());
 	}
 

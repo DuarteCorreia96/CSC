@@ -1,6 +1,9 @@
 #pragma once
+
 #include <filesystem>
 #include <string>
+#include <iostream>
+
 using namespace std;
 
 void admistrator(int tot_clients) {
@@ -25,6 +28,5 @@ void admistrator(int tot_clients) {
 	system("openssl req –new –config ..\\server\\openssl.cnf –key ..\\server\\server-key.pem –out ..\\CA\\signingReq.csr");
 
 	system("openssl x509 -req -days 365 -in ..\\CA\\signingReq.csr -CA ..\\CA\\CA-cert.pem -CAkey ..\\CA\\CA-key.pem -CAcreateserial -out ..\\server\\server-cert.pem");
-
 
 };
