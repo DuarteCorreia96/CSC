@@ -147,6 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\admin.h" />
     <ClInclude Include="include\archive.h" />
     <ClInclude Include="include\Definitions.h" />
     <ClInclude Include="include\examples.h" />
@@ -158,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\1_bfv_basics.cpp" />
+    <ClCompile Include="source\Admin.cpp" />
     <ClCompile Include="source\main.cpp" />
     <ClCompile Include="source\SQL_Client.cpp" />
     <ClCompile Include="source\SQL_Command.cpp" />
