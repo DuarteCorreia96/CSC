@@ -23,7 +23,7 @@ int main() {
 	
 	//admistrator(1);
 	
-	/*ifstream t("..\\data\\client1\\client1key.pem"); //taking file as inputstream
+	ifstream t("..\\data\\client1\\client1key.pem"); //taking file as inputstream
 	string str;
 	if (t) {
 		ostringstream ss;
@@ -39,9 +39,14 @@ int main() {
 
 	cout << msg_sign << "end msg sign" << endl;
 
-	//Erro??
-	cout << verifySignature(str, "olá", msg_sign) << endl;*/
+	cout << verifySignature(str, "olá", msg_sign) << endl;
 	 
+	/*RSA* RSAPK = createPrivateRSA(str);
+	unsigned char* EncMsg;
+	size_t MsgLenEnc = 10;
+	const unsigned char* msg= "olá"; 
+	size_t msg_size = sizeof("olá");
+	RSASign(RSAPK, msg, msg_size, &EncMsg, &MsgLenEnc);*/
 	//test_SQL_Command();
 
 	//test_func();

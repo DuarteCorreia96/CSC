@@ -38,6 +38,7 @@ void admistrator(int tot_clients) {
 
 	system("openssl genrsa -des3 -out ..\\data\\server\\server-key.pem 2048");
 
+	//DOES NOT WORK. ONLY IN TERMINAL
 	system("openssl req -new -config ..\\data\\CA\\openssl.cnf -key ..\\data\\server\\server-key.pem -out ..\\data\\CA\\signingReq.csr");
 
 	system("openssl x509 -req -days 365 -in ..\\data\\CA\\signingReq.csr -CA ..\\data\\CA\\CA-cert.pem -CAkey ..\\data\\CA\\CA-key.pem -CAcreateserial -out ..\\data\\server\\server-cert.pem");
