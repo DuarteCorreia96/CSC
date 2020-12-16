@@ -17,190 +17,171 @@
 using namespace std;
 
 void admistrator(int tot_clients) {
+
+	// generate key pair for root CA
 	system("openssl genrsa -des3 -out ..\\data\\CA\\CA-key.pem 2048");
-	//root CA certificate
+
+	// generate root CA certificate
 	system("openssl req -new -key ..\\data\\CA\\CA-key.pem -x509 -days 1000 -out ..\\data\\CA\\CA-cert.pem");
 
-	//put in a function
-	//distribute the certificates
-	for (int n_client = 1; n_client <= tot_clients; n_client++) {
-		string command1 = "copy ..\\data\\CA\\CA-cert.pem ..\\data\\client";
-		string command2 = "openssl genrsa -des3 -out ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "key.pem 2048";
-		command1 = command1 + std::to_string(n_client);
-		cout << command1 << endl;
-		cout << command2 << endl;
-		system(command1.c_str());
-		system(command2.c_str());
-
-	}
-
+	// send CA root certificate to the server
 	system("copy ..\\data\\CA\\CA-cert.pem ..\\data\\server");
 
+	// generate key pair of the server
 	system("openssl genrsa -des3 -out ..\\data\\server\\server-key.pem 2048");
 
+	// generate server certificate request and send it to the CA
 	system("openssl req -new -config ..\\data\\CA\\openssl.cnf -key ..\\data\\server\\server-key.pem -out ..\\data\\CA\\signingReq.csr");
 
+	// the certificate from our CA is used to sign the server's certificate
 	system("openssl x509 -req -days 365 -in ..\\data\\CA\\signingReq.csr -CA ..\\data\\CA\\CA-cert.pem -CAkey ..\\data\\CA\\CA-key.pem -CAcreateserial -out ..\\data\\server\\server-cert.pem");
 
-
-	for (int n_client = 1; n_client <= tot_clients; n_client++) {
-		string command = "copy ..\\data\\server\\server-cert.pem ..\\data\\client";
-		command = command + std::to_string(n_client);
-		cout << command << endl;
-		system(command.c_str());
-	}
 };
 
 
-size_t calcDecodeLength(const char* b64input) {
-	size_t len = strlen(b64input), padding = 0;
+void client_signMessage(string msg, int client_nr) {
 
-	if (b64input[len - 1] == '=' && b64input[len - 2] == '=') //last two chars are =
-		padding = 2;
-	else if (b64input[len - 1] == '=') //last char is =
-		padding = 1;
-	return (len * 3) / 4 - padding;
-}
+	// create file fo store signed message
+	ofstream MyFile("..\\data\\client1\\msg.txt");
 
-RSA* createPrivateRSA(std::string key) {
-	RSA* rsa = NULL;
-	const char* c_string = key.c_str();
-	BIO* keybio = BIO_new_mem_buf((void*)c_string, -1);
-	if (keybio == NULL) {
-		return 0;
-	}
-	rsa = PEM_read_bio_RSAPrivateKey(keybio, &rsa, NULL, NULL);
-	return rsa;
-}
+	// Write to the file
+	MyFile << msg;
 
-RSA* createPublicRSA(std::string key) {
-	RSA* rsa = NULL;
-	BIO* keybio;
-	const char* c_string = key.c_str();
-	keybio = BIO_new_mem_buf((void*)c_string, -1);
-	if (keybio == NULL) {
-		return 0;
-	}
-	rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa, NULL, NULL);
-	return rsa;
+	// Close the file
+	MyFile.close();
+
+	// sign the message
+	string command = "openssl dgst -sha256 -sign ..\\data\\client" + std::to_string(client_nr) + "\\client" + std::to_string(client_nr) + "-key.pem -out ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt";
+	system(command.c_str());
+
+	// convert to base64
+	string command1 = "openssl base64 -in ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 -out ..\\data\\client" + std::to_string(client_nr) + "\\msg_signed";
+	system(command1.c_str());
+
 }
 
 
-bool RSASign(RSA* rsa,
-	const unsigned char* Msg,
-	size_t MsgLen,
-	unsigned char** EncMsg,
-	size_t* MsgLenEnc) {
-	EVP_MD_CTX* m_RSASignCtx = EVP_MD_CTX_create();
-	EVP_PKEY* priKey = EVP_PKEY_new();
-	EVP_PKEY_assign_RSA(priKey, rsa);
-	if (EVP_DigestSignInit(m_RSASignCtx, NULL, EVP_sha256(), NULL, priKey) <= 0) {
-		return false;
-	}
-	if (EVP_DigestSignUpdate(m_RSASignCtx, Msg, MsgLen) <= 0) {
-		return false;
-	}
-	if (EVP_DigestSignFinal(m_RSASignCtx, NULL, MsgLenEnc) <= 0) {
-		return false;
-	}
-	*EncMsg = (unsigned char*)malloc(*MsgLenEnc);
-	if (EVP_DigestSignFinal(m_RSASignCtx, *EncMsg, MsgLenEnc) <= 0) {
-		return false;
-	}
-	//EVP_MD_CTX_cleanup(m_RSASignCtx);
-	return true;
-};
+void server_signMessage(string msg, int client_nr) {
 
-void Base64Encode(const unsigned char* buffer,
-	size_t length,
-	char** base64Text) {
-	BIO* bio, * b64;
-	BUF_MEM* bufferPtr;
+	// create file fo store signed message
+	ofstream MyFile("..\\data\\server\\client" + std::to_string(client_nr) + "\\msg.txt");
 
-	b64 = BIO_new(BIO_f_base64());
-	bio = BIO_new(BIO_s_mem());
-	bio = BIO_push(b64, bio);
+	// Write to the file
+	MyFile << msg;
 
-	BIO_write(bio, buffer, length);
-	BIO_flush(bio);
-	BIO_get_mem_ptr(bio, &bufferPtr);
-	BIO_set_close(bio, BIO_NOCLOSE);
-	BIO_free_all(bio);
+	// Close the file
+	MyFile.close();
 
-	*base64Text = (*bufferPtr).data;
+	// sign the message
+	string command = "openssl dgst -sha256 -sign ..\\data\\server\\server-key.pem -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\server\\client" + std::to_string(client_nr) + "\\msg.txt";
+	system(command.c_str());
+
+	// convert to base64
+	string command1 = "openssl base64 -in ..\\data\\server\\client" + std::to_string(client_nr) + "\\sign.sha256 -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\msg_signed";
+	system(command1.c_str());
+
 }
 
 
-void Base64Decode(const char* b64message, unsigned char** buffer, size_t* length) {
-	BIO* bio, * b64;
+void server_verifySignature(string original_msg) {
 
-	int decodeLen = calcDecodeLength(b64message);
-	*buffer = (unsigned char*)malloc(decodeLen + 1);
-	(*buffer)[decodeLen] = '\0';
+	// open file
+	ofstream MyFile("..\\data\\client1\\msg_to_sign2.txt");
 
-	bio = BIO_new_mem_buf(b64message, -1);
-	b64 = BIO_new(BIO_f_base64());
-	bio = BIO_push(b64, bio);
+	// Write to the file
+	MyFile << original_msg;
 
-	*length = BIO_read(bio, *buffer, strlen(b64message));
-	BIO_free_all(bio);
+	// Close the file
+	MyFile.close();
+
+	system("openssl base64 -d -in ..\\data\\client1\\msg_signed -out ..\\data\\client1\\sign.sha256");
+	system("openssl dgst -sha256 -verify ..\\data\\client1\\public1key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\msg_to_sign2.txt");
+
+}
+
+void client_verifySignature(string original_msg) {
+
+	// open file
+	ofstream MyFile("..\\data\\client1\\msg_to_sign2.txt");
+
+	// Write to the file
+	MyFile << original_msg;
+
+	// Close the file
+	MyFile.close();
+
+	system("openssl base64 -d -in ..\\data\\client1\\msg_signed -out ..\\data\\client1\\sign.sha256");
+	system("openssl dgst -sha256 -verify ..\\data\\client1\\public1key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\msg_to_sign2.txt");
+
 }
 
 
+void client_encrypt(string plaintext, int client_nr) {
 
-char* signMessage(std::string privateKey, std::string plainText) {
-	RSA* privateRSA = createPrivateRSA(privateKey);
-	unsigned char* encMessage;
-	char* base64Text;
-	size_t encMessageLength;
-	RSASign(privateRSA, (unsigned char*)plainText.c_str(), plainText.length(), &encMessage, &encMessageLength);
-	Base64Encode(encMessage, encMessageLength, &base64Text);
-	free(encMessage);
-	return base64Text;
+	// put the string in a file
+	ofstream MyFile("..\\data\\client" + std::to_string(client_nr) + "\\msg.txt");
+	// Write to the file
+	MyFile << plaintext;
+	// Close the file
+	MyFile.close();
+
+	// ecrypt
+
+	string command = "openssl rsautl -encrypt -pubin -inkey ..\\data\\client" + std::to_string(client_nr) + "\\server-public-key.pem -in ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\encrypted-msg.txt";
+	system(command.c_str());
+}
+
+string server_decrypt() {
+
+	// decrypt
+	system("openssl rsautl -decrypt -inkey ..\\data\\server\\server-key.pem -in ..\\data\\server\\encrypted.txt -out ..\\data\\server\\plaintext.txt");
+	
+	// put the content of the file in a string
+	ifstream t("..\\data\\server\\encrypted.txt"); //taking file as inputstream
+	string str;
+	if (t) {
+		ostringstream ss;
+		ss << t.rdbuf(); // reading data
+		str = ss.str();
+	}
+
+	return str;
 }
 
 
-bool RSAVerifySignature(RSA* rsa,
-	unsigned char* MsgHash,
-	size_t MsgHashLen,
-	const char* Msg,
-	size_t MsgLen,
-	bool* Authentic) {
-	*Authentic = false;
-	EVP_PKEY* pubKey = EVP_PKEY_new();
-	EVP_PKEY_assign_RSA(pubKey, rsa);
-	EVP_MD_CTX* m_RSAVerifyCtx = EVP_MD_CTX_create();
+int new_client(int n_client) {
 
-	if (EVP_DigestVerifyInit(m_RSAVerifyCtx, NULL, EVP_sha256(), NULL, pubKey) <= 0) {
-		return false;
-	}
-	if (EVP_DigestVerifyUpdate(m_RSAVerifyCtx, Msg, MsgLen) <= 0) {
-		return false;
-	}
-	int AuthStatus = EVP_DigestVerifyFinal(m_RSAVerifyCtx, MsgHash, MsgHashLen);
-	if (AuthStatus == 1) {
-		*Authentic = true;
-		//EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-		return true;
-	}
-	else if (AuthStatus == 0) {
-		*Authentic = false;
-		//EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-		return true;
-	}
-	else {
-		*Authentic = false;
-		//EVP_MD_CTX_cleanup(m_RSAVerifyCtx);
-		return false;
-	}
-}
+	n_client++;
 
-bool verifySignature(std::string publicKey, std::string plainText, char* signatureBase64) {
-	RSA* publicRSA = createPublicRSA(publicKey);
-	unsigned char* encMessage;
-	size_t encMessageLength;
-	bool authentic;
-	Base64Decode(signatureBase64, &encMessage, &encMessageLength);
-	bool result = RSAVerifySignature(publicRSA, encMessage, encMessageLength, plainText.c_str(), plainText.length(), &authentic);
-	return result & authentic;
+	// create directories
+	string command = "mkdir ..\\data\\server\\clients\\client" + std::to_string(n_client);
+	system(command.c_str());
+	string command1 = "mkdir ..\\data\\client" + std::to_string(n_client);
+	system(command1.c_str());
+
+	// send CA root certificate to a client
+	string command2 = "copy ..\\data\\CA\\CA-cert.pem ..\\data\\client" + std::to_string(n_client);
+	system(command2.c_str());
+
+	// generate key pair of a client
+	string command3 = "openssl genrsa -des3 -out ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "key.pem 2048";
+	system(command3.c_str());
+
+	// get public key of a client
+	string command4 = "openssl rsa -in ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "key.pem -pubout > ..\\data\\client" + std::to_string(n_client) + "\\public" + std::to_string(n_client) + "key.pem";
+	system(command4.c_str());
+
+	// send server's certificate to a client
+	string command5 = "copy ..\\data\\server\\server-cert.pem ..\\data\\client" + std::to_string(n_client);
+	system(command5.c_str());
+
+	// obtain the public key of the server
+	string command6 = "openssl x509 -pubkey -noout -in ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem  > ..\\data\\client" + std::to_string(n_client) + "\\server-public-key.pem";
+	system(command6.c_str());
+
+	// verify server's certificate
+	string command7 = "openssl verify -verbose -CAfile ..\\data\\client" + std::to_string(n_client) + "\\CA-cert.pem  ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem";
+	system(command7.c_str());
+
+	return n_client;
 }

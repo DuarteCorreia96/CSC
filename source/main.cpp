@@ -20,27 +20,25 @@ using namespace seal;
 
 int main() {
 	  
-	
-	//admistrator(1);
-	
-	/*ifstream t("..\\data\\client1\\client1key.pem"); //taking file as inputstream
+	/*int tot_clients = 0;
+	// create server and CA certificates and keys
+	admistrator(tot_clients);
+
 	string str;
-	if (t) {
-		ostringstream ss;
-		ss << t.rdbuf(); // reading data
-		str = ss.str();
-	}
-	cout << str << endl;
 
-	
+	// create client's keys, certificates, ...
+	tot_clients = new_client(tot_clients);
+	tot_clients = new_client(tot_clients);
+	*/
+	//client_signMessage("ola", 1);
+	//client_encrypt("ola", 1);
 
 
-	char* msg_sign = signMessage(str, "olá");
+	//server_decrypt();
+	//server_verifySignature(1);
 
-	cout << msg_sign << "end msg sign" << endl;
 
-	//Erro??
-	cout << verifySignature(str, "olá", msg_sign) << endl;*/
+	////////////////////////////////
 	 
 	//test_SQL_Command();
 
