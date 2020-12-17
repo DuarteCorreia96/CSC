@@ -42,6 +42,7 @@ public:
 	void save_table(Json::Value table, std::string path);
 	void create_table(std::string tablename, std::set<std::string> columns);
 	void insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values);
+	void delete_line(std::string tablename, int linenum);
 
 	Json::Value load_table(std::string path);
 };

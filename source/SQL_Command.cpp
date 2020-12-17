@@ -116,8 +116,11 @@ SQL_Command::select(std::vector<std::string> command_vector) {
 
     if (where_index) {
 
+        Json::Value valid;
+
         command_json["where"] = parse_conditions(command_vector, where_index);
-        if (not command_json["where"]["valid"].asBool()) { return; }
+        command_json["where"].removeMember("valid", &valid);
+        if (not valid.asBool()) { return; }
     }
 
     command_json["table"] = command_vector[from_index + 1];

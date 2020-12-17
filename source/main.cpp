@@ -10,11 +10,12 @@
 #include <json/json.h>
 #include <set>
 
-#include<iostream>
-#include<fstream>
-#include<sstream>
-#include<string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
 
+#include <openssl/rsa.h>
 
 using namespace std;
 using namespace seal;
@@ -53,7 +54,7 @@ int main() {
 	SQL_Database db(context, relin_keys, secret_key);
 	SQL_Client client(client_name, context, public_key, secret_key);
 
-	string tablename = "Table1";
+	string tablename = "Table2";
 	set<string> columns_set{"col1", "col2"};
 	vector<string> columns{"col2", "col1"};
 
@@ -64,7 +65,7 @@ int main() {
 
 	db.create_table(tablename,  columns_set);
 	db.insert_values(tablename, columns, values);
-
+	db.delete_line(tablename, 2);
 }
 
  

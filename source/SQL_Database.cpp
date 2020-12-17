@@ -127,7 +127,7 @@ Json::Value SQL_Database::load_table(std::string path) {
 
 void SQL_Database::create_table(std::string tablename, std::set<std::string> columns) {
 
-	if (std::filesystem::exists(DATABASE_FOLDERS + tablename)) {
+	if (std::filesystem::exists(DATABASE_TABLES + tablename)) {
 		std::cout << "Table already exists!" << std::endl;
 		return;
 	}
@@ -151,7 +151,7 @@ void SQL_Database::create_table(std::string tablename, std::set<std::string> col
 
 void SQL_Database::insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values) {
 
-	Json::Value table = load_table(DATABASE_FOLDERS + tablename + "\\" + "config.json");
+	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table.empty()) {
 		return;
 	}
@@ -181,7 +181,7 @@ void SQL_Database::insert_values(std::string tablename, std::vector<std::string>
 
 	for (int i = 0; i < columns.size(); i++) {
 
-		std::ofstream out(DATABASE_FOLDERS + tablename + "\\" + columns[i] + "\\" + filename, std::ios::binary);
+		std::ofstream out(DATABASE_TABLES + tablename + "\\" + columns[i] + "\\" + filename, std::ios::binary);
 		save_encripted(values[i], out);
 		out.close();
 	}
@@ -189,5 +189,31 @@ void SQL_Database::insert_values(std::string tablename, std::vector<std::string>
 	table["files"].append(new_id);
 	table["n_values"] = table["n_values"].asInt() + 1;
 
-	save_table(table, DATABASE_FOLDERS + tablename + "\\" + "config.json");
+	save_table(table, DATABASE_TABLES + tablename + "\\" + "config.json");
+}
+
+void SQL_Database::delete_line(std::string tablename, int linenum) {
+
+	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
+	if (table.empty()) {
+		return;
+	}
+
+	if (table["n_values"] < linenum) {
+		std::cout << "Line number too high!" << std::endl;
+		return;
+	}
+
+	Json::Value file_ID;
+	table["files"].removeIndex(linenum - 1, &file_ID);
+	table["n_values"] = table["n_values"].asInt() - 1;
+
+	std::string filename = std::to_string(file_ID.asInt()) + ".data";
+	for (Json::Value col : table["columns"]) {
+
+		std::string filepath = DATABASE_TABLES + tablename + "\\" + col.asString() + "\\" + filename;
+		std::filesystem::remove(filepath);
+	}
+
+	save_table(table, DATABASE_TABLES + tablename + "\\" + "config.json");
 }

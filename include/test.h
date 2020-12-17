@@ -181,7 +181,10 @@ int test_SQL_Command() {
 	SQL_Command function{ command_used };
 
 	Json::Value command_json = function.get_command_json();
-	if (not command_json["valid"].asBool()) {
+	Json::Value valid;
+
+	command_json.removeMember("valid", &valid);
+	if (not valid.asBool()) {
 		return -1;
 	}
 
