@@ -16,7 +16,11 @@
 
 using namespace std;
 
+
 void admistrator(int tot_clients) {
+
+	// create server's directory
+	system("mkdir ..\\data\\server\\");
 
 	// generate key pair for root CA
 	system("openssl genrsa -des3 -out ..\\data\\CA\\CA-key.pem 2048");
@@ -51,7 +55,7 @@ void client_signMessage(string msg, int client_nr) {
 	MyFile.close();
 
 	// sign the message
-	string command = "openssl dgst -sha256 -sign ..\\data\\client" + std::to_string(client_nr) + "\\client" + std::to_string(client_nr) + "-key.pem -out ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt";
+	string command = "openssl dgst -sha256 -sign ..\\data\\client" + std::to_string(client_nr) + "\\client" + std::to_string(client_nr) + "-private-key.pem -out ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt";
 	system(command.c_str());
 
 	// convert to base64
@@ -83,10 +87,10 @@ void server_signMessage(string msg, int client_nr) {
 }
 
 
-void server_verifySignature(string original_msg) {
+void server_verifySignature(string original_msg, int client_nr) {
 
 	// open file
-	ofstream MyFile("..\\data\\client1\\msg_to_sign2.txt");
+	ofstream MyFile("..\\data\\client1\\original_msg.txt");
 
 	// Write to the file
 	MyFile << original_msg;
@@ -95,7 +99,8 @@ void server_verifySignature(string original_msg) {
 	MyFile.close();
 
 	system("openssl base64 -d -in ..\\data\\client1\\msg_signed -out ..\\data\\client1\\sign.sha256");
-	system("openssl dgst -sha256 -verify ..\\data\\client1\\public1key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\msg_to_sign2.txt");
+	string command = "openssl dgst -sha256 -verify ..\\data\\server\\clients\\client1\\client" + std::to_string(client_nr) + "-public-key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\original_msg.txt";
+	system(command.c_str());
 
 }
 
@@ -127,14 +132,14 @@ void client_encrypt(string plaintext, int client_nr) {
 
 	// ecrypt
 
-	string command = "openssl rsautl -encrypt -pubin -inkey ..\\data\\client" + std::to_string(client_nr) + "\\server-public-key.pem -in ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\encrypted-msg.txt";
+	string command = "openssl rsautl -encrypt -pubin -inkey ..\\data\\client" + std::to_string(client_nr) + "\\server-public-key.pem -in ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt -out ..\\data\\server\\clients\\client" + std::to_string(client_nr) + "\\encrypted-msg.txt";
 	system(command.c_str());
 }
 
 string server_decrypt() {
 
 	// decrypt
-	system("openssl rsautl -decrypt -inkey ..\\data\\server\\server-key.pem -in ..\\data\\server\\encrypted.txt -out ..\\data\\server\\plaintext.txt");
+	system("openssl rsautl -decrypt -inkey ..\\data\\server\\server-key.pem -in ..\\data\\server\\clients\\client1\\encrypted-msg.txt -out ..\\data\\server\\clients\\client1\\plaintext.txt");
 	
 	// put the content of the file in a string
 	ifstream t("..\\data\\server\\encrypted.txt"); //taking file as inputstream
@@ -161,26 +166,32 @@ int new_client(int n_client) {
 
 	// send CA root certificate to a client
 	string command2 = "copy ..\\data\\CA\\CA-cert.pem ..\\data\\client" + std::to_string(n_client);
+	cout << "---->" << (command2) << endl;
 	system(command2.c_str());
 
 	// generate key pair of a client
-	string command3 = "openssl genrsa -des3 -out ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "key.pem 2048";
+	string command3 = "openssl genrsa -des3 -out ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-private-key.pem 2048";
+	cout << "---->" << (command3) << endl;
 	system(command3.c_str());
 
 	// get public key of a client
-	string command4 = "openssl rsa -in ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "key.pem -pubout > ..\\data\\client" + std::to_string(n_client) + "\\public" + std::to_string(n_client) + "key.pem";
+	string command4 = "openssl rsa -in ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-private-key.pem -pubout > ..\\data\\server\\clients\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-public-key.pem";
+	cout << "---->" << command4 << endl;
 	system(command4.c_str());
 
 	// send server's certificate to a client
 	string command5 = "copy ..\\data\\server\\server-cert.pem ..\\data\\client" + std::to_string(n_client);
+	cout << "---->" << (command5) << endl;
 	system(command5.c_str());
 
-	// obtain the public key of the server
-	string command6 = "openssl x509 -pubkey -noout -in ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem  > ..\\data\\client" + std::to_string(n_client) + "\\server-public-key.pem";
+	// verify server's certificate
+	string command6 = "openssl verify -verbose -CAfile ..\\data\\client" + std::to_string(n_client) + "\\CA-cert.pem  ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem";
+	cout << "---->" << (command6) << endl;
 	system(command6.c_str());
 
-	// verify server's certificate
-	string command7 = "openssl verify -verbose -CAfile ..\\data\\client" + std::to_string(n_client) + "\\CA-cert.pem  ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem";
+	// obtain the public key of the server
+	string command7 = "openssl x509 -pubkey -noout -in ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem  > ..\\data\\client" + std::to_string(n_client) + "\\server-public-key.pem";
+	cout << "---->" << (command7) << endl;
 	system(command7.c_str());
 
 	return n_client;

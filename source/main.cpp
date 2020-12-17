@@ -1,6 +1,7 @@
 #include "Definitions.h"
 #include "seal_utilities_extra.h"
 #include "test.h"
+#include "admin.h"
 
 #include <seal/seal.h>
 #include <iostream>
@@ -13,14 +14,13 @@
 #include<sstream>
 #include<string>
 
-#include "admin.h"
 
 using namespace std;
 using namespace seal;
 
 int main() {
 	  
-	/*int tot_clients = 0;
+	int tot_clients = 0;
 	// create server and CA certificates and keys
 	admistrator(tot_clients);
 
@@ -29,13 +29,13 @@ int main() {
 	// create client's keys, certificates, ...
 	tot_clients = new_client(tot_clients);
 	tot_clients = new_client(tot_clients);
-	*/
+
 	//client_signMessage("ola", 1);
-	//client_encrypt("ola", 1);
+	client_encrypt("ola", 1);
 
-
-	//server_decrypt();
-	//server_verifySignature(1);
+	string msg = server_decrypt();
+	cout << msg << endl;
+	//server_verifySignature("ola", 1);
 
 
 	////////////////////////////////
