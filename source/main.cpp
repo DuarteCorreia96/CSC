@@ -10,6 +10,12 @@
 #include <json/json.h>
 #include <set>
 
+#include<iostream>
+#include<fstream>
+#include<sstream>
+#include<string>
+
+
 using namespace std;
 using namespace seal;
 
