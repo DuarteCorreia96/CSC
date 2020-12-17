@@ -161,6 +161,7 @@
     <ClCompile Include="source\1_bfv_basics.cpp" />
     <ClCompile Include="source\Admin.cpp" />
     <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\seal_utilities_extra.cpp" />
     <ClCompile Include="source\SQL_Client.cpp" />
     <ClCompile Include="source\SQL_Command.cpp" />
     <ClCompile Include="source\SQL_Database.cpp" />

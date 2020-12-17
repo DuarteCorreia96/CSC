@@ -90,24 +90,23 @@ SQL_Command::select(std::vector<std::string> command_vector) {
     if (command_vector[1].size() > 5 && command_vector[1].compare(0, 4, "SUM(") == 0 && command_vector[1].back() == ')') {
             
         command_json["columns"][0] = command_vector[1].substr(4, command_vector[1].size() - 5);
-        command_json["secondary"] = "SUM";
+        command_json["function"] = "SELECT_SUM";
 
-    }
-    else if (command_vector[1].compare("LINE") == 0) {
+    } else if (command_vector[1].compare("LINE") == 0) {
 
         if (command_vector.size() > 5) {
             return;
         }
 
-        command_json["secondary"] = "LINE";
+        command_json["function"] = "SELECT_LINE";
         try {
             command_json["linenum"] = std::stoi(command_vector[2]);
         }
         catch (std::exception e) { return; }
-    }
-    else {
 
-        command_json["secondary"] = Json::nullValue;
+    } else {
+
+        command_json["function"] = "SELECT";
         for (int i = 1; i < from_index; i++) {
 
             rem_spec_char(command_vector, i);
@@ -121,7 +120,6 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         if (not command_json["where"]["valid"].asBool()) { return; }
     }
 
-    command_json["primary"] = "SELECT";
     command_json["table"] = command_vector[from_index + 1];
     command_json["valid"] = true;
 }
@@ -145,7 +143,7 @@ SQL_Command::create_table(std::vector<std::string> command_vector) {
         index++;
     }
 
-    command_json["primary"] = "CREATE";
+    command_json["function"] = "CREATE";
     command_json["table"] = command_vector[2];
     command_json["valid"] = true;
 }
@@ -196,7 +194,7 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         catch (std::exception e) { return; }
     }
 
-    command_json["primary"] = "INSERT";
+    command_json["function"] = "INSERT";
     command_json["table"] = command_vector[3];
     command_json["valid"] = true;
 }
@@ -215,7 +213,7 @@ SQL_Command::delete_from(std::vector<std::string> command_vector) {
     }
     catch (std::exception e) { return; }
 
-    command_json["primary"] = "DELETE";
+    command_json["function"] = "DELETE";
     command_json["table"] = command_vector[3];
     command_json["valid"] = true;
 }

@@ -1,11 +1,13 @@
 #include "SQL_Client.h"
 
 #include <vector>
-#include <seal/seal.h>
 #include <bitset>
 #include <string>
+#include <sstream>
 
-std::vector<seal::Ciphertext> SQL_Client::encrypt_int_bin(__int64 x) {
+Encrypted_int SQL_Client::encrypt_int(__int64 x) {
+
+	Encrypted_int x_enc{};
 
 	std::vector<seal::Ciphertext> x_vec_enc{};
 
@@ -21,14 +23,32 @@ std::vector<seal::Ciphertext> SQL_Client::encrypt_int_bin(__int64 x) {
 		x_vec_enc.push_back(aux_encrypted);
 	}
 
-	return x_vec_enc;
-}
+	seal::Ciphertext x_enc_value{};
+	encryptor.encrypt(seal::Plaintext(std::to_string(x)), x_enc_value);
 
-seal::Ciphertext SQL_Client::encrypt_int(__int64 x) {
-
-	seal::Ciphertext x_enc{};
-	encryptor.encrypt(seal::Plaintext(std::to_string(x)), x_enc);
+	x_enc.bin_vec = x_vec_enc;
+	x_enc.value   = x_enc_value;
 
 	return x_enc;
 }
 
+Decrypted_int SQL_Client::decrypt_int(Encrypted_int x_enc) {
+
+	Decrypted_int x_dec;
+
+	std::vector<int> x_vec_enc{};
+
+	x_dec.bin_vec.resize(N_BITS);
+
+	seal::Plaintext aux_plain;
+	for (size_t i = 0; i < N_BITS; i++) {
+
+		decryptor.decrypt(x_enc.bin_vec[i], aux_plain);
+		x_dec.bin_vec[i] = std::atoi(aux_plain.to_string().c_str());
+	}
+
+	decryptor.decrypt(x_enc.value, aux_plain);
+	x_dec.value = std::atoi(aux_plain.to_string().c_str());
+
+	return x_dec;
+}

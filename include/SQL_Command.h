@@ -30,14 +30,11 @@ private:
 		{ "SELECT", &SQL_Command::select       }
 	};
 
-
 	Json::Value parse_conditions(std::vector<std::string> command_vector, unsigned __int64 start_index);
 	
 	void to_uppercase_str(std::string& aux_string);
 	void to_uppercase( std::vector<std::string> &command_vector, unsigned __int64 index);
 	void rem_spec_char(std::vector<std::string> &command_vector, unsigned __int64 index);	
-
-	bool all_ok = false;
 
 public:
 
@@ -50,8 +47,6 @@ public:
 	void delete_from (std::vector<std::string> command_vector);
 	
 	Json::Value get_command_json() { return command_json; };
-
-	bool check_command() { return all_ok; }
 };
 
 

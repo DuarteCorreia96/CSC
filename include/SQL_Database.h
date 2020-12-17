@@ -1,9 +1,13 @@
 #pragma once
 
 #include "Definitions.h"
+#include "seal_utilities_extra.h"
 
 #include <seal/seal.h>
 #include <vector>
+#include <set>
+#include <string>
+#include <json/json.h>
 
 class SQL_Database {
 
@@ -25,12 +29,19 @@ private:
 
 public:
 
-	seal::Ciphertext compare(std::vector<seal::Ciphertext> x, std::vector<seal::Ciphertext> y, char operation);
-
 	SQL_Database(seal::SEALContext context, seal::RelinKeys relin, seal::SecretKey secret) 
 		: evaluator(context), decryptor(context, secret) {
 
 		relin_keys = relin;
 		plain_one  = seal::Plaintext("1");
 	};
+
+
+	seal::Ciphertext compare(std::vector<seal::Ciphertext> x, std::vector<seal::Ciphertext> y, char operation);
+
+	void save_table(Json::Value table, std::string path);
+	void create_table(std::string tablename, std::set<std::string> columns);
+	void insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values);
+
+	Json::Value load_table(std::string path);
 };

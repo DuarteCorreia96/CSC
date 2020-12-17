@@ -1,6 +1,9 @@
 #include "SQL_Database.h"
 
 #include <iostream>
+#include <filesystem>
+#include <json/json.h>
+#include <fstream>
 
 void SQL_Database::not_inplace(seal::Ciphertext &encrypted) {
 
@@ -95,4 +98,96 @@ seal::Ciphertext SQL_Database::compare(std::vector<seal::Ciphertext> x, std::vec
 	else if (operation == '=') { return equal; }
 
 	return blank;
+}
+
+void SQL_Database::save_table(Json::Value table, std::string path) {
+
+	Json::StreamWriterBuilder builder;
+	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+	std::ofstream out(path, std::ios::binary);
+
+	writer->write(table, &out);
+	out << std::endl;
+	out.close();
+}
+
+Json::Value SQL_Database::load_table(std::string path) {
+
+	Json::Value table;
+	if (not std::filesystem::exists(path)) {
+		std::cout << "Table does not exist!" << std::endl;
+		return table;
+	}
+
+	std::ifstream in(path, std::ios::binary);
+
+	in >> table;
+	in.close();
+}
+
+void SQL_Database::create_table(std::string tablename, std::set<std::string> columns) {
+
+	if (std::filesystem::exists(DATABASE_FOLDERS + tablename)) {
+		std::cout << "Table already exists!" << std::endl;
+		return;
+	}
+
+	Json::Value table;
+	std::filesystem::create_directory(std::filesystem::path(DATABASE_FOLDERS + tablename));
+	table["n_cols"] = columns.size();
+	table["n_values"] = 0;
+	table["files"] = Json::arrayValue;
+
+	int index = 0;
+	for (std::string column : columns) {
+		
+		std::filesystem::create_directory(std::filesystem::path(DATABASE_FOLDERS + tablename + "\\" + column));
+		table["columns"][index++] = column;
+	}
+
+	save_table(table, DATABASE_FOLDERS + tablename + "\\" + "config.json");
+
+}
+
+void SQL_Database::insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values) {
+
+	Json::Value table = load_table(DATABASE_FOLDERS + tablename + "\\" + "config.json");
+	if (table.empty()) {
+		return;
+	}
+
+	// Verify if all columns have values to fill
+	std::set<std::string> columns_insert;
+	for (std::string col : columns) {
+		columns_insert.insert(col);
+	}
+
+	std::set<std::string> columns_table;
+	for (Json::Value col : table["columns"]) {
+		columns_table.insert(col.asString());
+	}
+
+	if (not (columns_insert == columns_table) &&			// If both sets are not equal
+		not (columns.size() == columns_insert.size()) &&	// If input vector is not a set
+		not (columns.size() == values.size()) ) {			// If no values missing
+		std::cout << "Columns not correct!" << std::endl;
+		return;
+	}
+
+	int n_values = table["n_values"].asInt();
+	int new_id   = n_values == 0 ? 1 : table["files"][n_values - 1].asInt() + 1;
+
+	std::string filename = std::to_string(new_id) + ".data";
+
+	for (int i = 0; i < columns.size(); i++) {
+
+		std::ofstream out(DATABASE_FOLDERS + tablename + "\\" + columns[i] + "\\" + filename, std::ios::binary);
+		save_encripted(values[i], out);
+		out.close();
+	}
+	
+	table["files"].append(new_id);
+	table["n_values"] = table["n_values"].asInt() + 1;
+
+	save_table(table, DATABASE_FOLDERS + tablename + "\\" + "config.json");
 }

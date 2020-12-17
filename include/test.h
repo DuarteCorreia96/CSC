@@ -13,6 +13,81 @@
 
 #include <json/json.h>
 
+
+void test_seal() {
+
+	using namespace std;
+	using namespace seal;
+
+	std::string client_name = "admin";
+
+	// If you need to generate new keys
+	// create_keys(client_name);
+
+	seal::SEALContext context = init_SEAL_Context();
+	seal::PublicKey public_key = load_SEAL_public(context, client_name);
+	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
+	seal::RelinKeys relin_keys = load_SEAL_relins(context, client_name);
+
+	SQL_Client client(client_name, context, public_key, secret_key);
+
+	ofstream out("data\\enc.txt", ios::binary);
+
+	Json::Value root, function;
+	Json::StreamWriterBuilder builder;
+	root["function"]["pri"] = "select";
+	root["function"]["sub"] = "sum";
+
+	root["columns"][0] = "col1";
+	root["columns"][1] = "col2";
+	root["columns"][2] = "col3";
+
+	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+	writer->write(root, &out);
+	out << endl;
+
+	out << "Values below:" << endl;
+
+	Encrypted_int x_enc = client.encrypt_int(5);
+	save_encripted(x_enc, out);
+
+	out.close();
+
+	cout << "saved" << endl;
+
+	std::string test;
+
+	ifstream in("data\\enc.txt", ios::binary);
+
+	std::string json_string;
+	while (test.compare("Values below:") != 0) {
+
+		std::getline(in, test);
+		json_string.append(test);
+		json_string.append("\n");
+	}
+
+	JSONCPP_STRING err;
+	Json::Value data;
+	Json::CharReaderBuilder rbuilder;
+	std::stringstream json_parse(json_string);
+	Json::parseFromStream(rbuilder, json_parse, &data, &err);
+
+	cout << data["function"]["pri"].asString() << endl;
+	cout << data["function"]["sub"].asString() << endl;
+	for (auto& col : data["columns"]) {
+		cout << col.asString() << endl;
+	}
+
+	Encrypted_int y_enc = load_enc_int(context, in);
+	Decrypted_int y = client.decrypt_int(y_enc);
+
+	cout << y.value << endl;
+	for (int bit : y.bin_vec) {
+		cout << bit;
+	} cout << endl;
+}
+
 void test_func() {
 
 	int x = 30;
@@ -38,7 +113,7 @@ void test_func() {
 	seal::SEALContext context(parms);
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
-	seal::RelinKeys relin_keys = load_SEAL_relin(context, client_name);
+	seal::RelinKeys relin_keys = load_SEAL_relins(context, client_name);
 
 	seal::Encryptor encryptor(context, public_key);
 	seal::Evaluator evaluator(context);
@@ -46,8 +121,8 @@ void test_func() {
 
 	SQL_Client client("client", context, public_key, secret_key);
 
-	std::vector<seal::Ciphertext> x_vec_enc = client.encrypt_int_bin(x);
-	std::vector<seal::Ciphertext> y_vec_enc = client.encrypt_int_bin(y);
+	std::vector<seal::Ciphertext> x_vec_enc = client.encrypt_int(x).bin_vec;
+	std::vector<seal::Ciphertext> y_vec_enc = client.encrypt_int(y).bin_vec;
 
 	SQL_Database database(context, relin_keys, secret_key);
 
@@ -102,7 +177,7 @@ int test_SQL_Command() {
 	std::string insert_c = "INSERT INTO TABLE tablename (col1, col2) VALUES (1, 2)";
 	std::string create_c = "CREATE TABLE tablename (col1, col2, col3)";
 
-	std::string command_used = select_l;
+	std::string command_used = select_c;
 	SQL_Command function{ command_used };
 
 	Json::Value command_json = function.get_command_json();
