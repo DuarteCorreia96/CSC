@@ -23,12 +23,8 @@ typedef struct Decrypted_int {
 
 seal::SEALContext init_SEAL_Context();
 
-void create_keys(std::string client_name);
-
 seal::SecretKey load_SEAL_secret(seal::SEALContext context, std::string client_name = "client");
 seal::PublicKey load_SEAL_public(seal::SEALContext context, std::string client_name = "client");
-seal::RelinKeys load_SEAL_relins(seal::SEALContext context, std::string client_name = "client");
-
 
 void save_encripted(Encrypted_int x_enc, std::ofstream& out);
 

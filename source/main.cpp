@@ -51,10 +51,10 @@ int main() {
 	seal::SEALContext context  = init_SEAL_Context();
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
-	seal::RelinKeys relin_keys = load_SEAL_relins(context, client_name);
 
-	SQL_Database db(context, relin_keys, secret_key);
+	SQL_Database db(context, secret_key);
 	SQL_Client client(client_name, context, public_key, secret_key);
+
 
 	string tablename = "Table1";
 	set<string> columns_set{"col1", "col2", "col3"};
@@ -64,9 +64,9 @@ int main() {
 	seal::Ciphertext random = client.get_random_enc();
 	values.push_back(client.encrypt_int(2));
 	values.push_back(client.encrypt_int(1));
-	values.push_back(client.encrypt_int(3));
+	values.push_back(client.encrypt_int(1));
 
-	db.create_table(tablename,  columns_set);
+	//db.create_table(tablename,  columns_set);
 	//db.insert_values(tablename, columns, values, random);
 	//db.delete_line(tablename, 2);
 
@@ -79,7 +79,7 @@ int main() {
 		std::ofstream out_2(filepath_2, std::ios::binary);
 
 		save_encripted(client.encrypt_int(2), out_1);
-		save_encripted(client.encrypt_int(1), out_2);
+		save_encripted(client.encrypt_int(3), out_2);
 
 		out_1.close();
 		out_2.close();
@@ -94,13 +94,13 @@ int main() {
 	db.select(tablename, function.get_command_json(), client);
 
 
-	select = "SELECT col1, col2, col3 FROM Table1 WHERE col2 > 2";
+	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2 AND col3 = 3";
 	std::cout << select << std::endl;
 
 	function.parse(select);
 	db.select(tablename, function.get_command_json(), client);
 
-	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2";
+	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2 OR col3 = 3";
 	std::cout << select << std::endl;
 
 	function.parse(select);

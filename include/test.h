@@ -27,7 +27,6 @@ void test_seal() {
 	seal::SEALContext context = init_SEAL_Context();
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
-	seal::RelinKeys relin_keys = load_SEAL_relins(context, client_name);
 
 	SQL_Client client(client_name, context, public_key, secret_key);
 
@@ -113,7 +112,6 @@ void test_func() {
 	seal::SEALContext context(parms);
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
-	seal::RelinKeys relin_keys = load_SEAL_relins(context, client_name);
 
 	seal::Encryptor encryptor(context, public_key);
 	seal::Evaluator evaluator(context);
@@ -124,7 +122,7 @@ void test_func() {
 	std::vector<seal::Ciphertext> x_vec_enc = client.encrypt_int(x).bin_vec;
 	std::vector<seal::Ciphertext> y_vec_enc = client.encrypt_int(y).bin_vec;
 
-	SQL_Database database(context, relin_keys, secret_key);
+	SQL_Database database(context, secret_key);
 
 	seal::Ciphertext op_encry;
 	seal::Plaintext  op_plain;

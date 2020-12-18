@@ -231,6 +231,19 @@ void SQL_Database::delete_line(std::string tablename, int linenum) {
 }
 
 
+std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::string> full_data_paths, std::string path_compare, char operation) {
+
+	std::vector<seal::Ciphertext> compare_vec(full_data_paths.size());
+
+	Encrypted_int to_compare = load_enc_int(context, path_compare);
+
+	for (int id = 0; id < compare_vec.size(); id++) {
+		compare_vec[id] = compare(load_enc_int(context, full_data_paths[id]).bin_vec, to_compare.bin_vec, operation);
+	}
+
+	return compare_vec;
+}
+
 
 void SQL_Database::select(std::string tablename, Json::Value command, SQL_Client &client) {
 
@@ -274,24 +287,48 @@ void SQL_Database::select(std::string tablename, Json::Value command, SQL_Client
 	}
 
 	// Comparing function
-	std::vector<seal::Ciphertext> compare_vec(n_values);
 	if (command["where"]["condition_1"] != Json::nullValue) {
 
-		char operation = command["where"]["condition_1"]["operation"].asInt();
-		std::string column_name = command["where"]["condition_1"]["variable"].asString();
-		
+		Json::Value condition = command["where"]["condition_1"];
+
+		std::string column_name = condition["variable"].asString();
 		if (not (columns_set.find(column_name) != columns_set.end())) {
 			std::cout << "Table does not contain column " << column_name << std::endl;
 			return;
 		}
 
-		Encrypted_int to_compare = load_enc_int(context, DATABASE_FOLDERS + "command\\cond_1.data");
-
-		std::vector<Encrypted_int> column_enc(n_values);
+		std::vector<std::string> full_data_paths(n_values);
 		for (int id = 0; id < n_values; id++) {
-			
-			column_enc[id]  = load_enc_int(context, DATABASE_TABLES + tablename + "\\" + column_name + "\\" + data_files[id]);
-			compare_vec[id] = compare(column_enc[id].bin_vec, to_compare.bin_vec, operation);
+			full_data_paths[id] = DATABASE_TABLES + tablename + "\\" + column_name + "\\" + data_files[id];
+		}
+
+		std::vector<seal::Ciphertext> compare_vec = get_compare_vec(full_data_paths, DATABASE_FOLDERS + "command\\cond_1.data", condition["operation"].asInt());
+
+		if (command["where"]["condition_2"] != Json::nullValue) {
+
+			condition   = command["where"]["condition_2"];
+			column_name = condition["variable"].asString();
+			if (not (columns_set.find(column_name) != columns_set.end())) {
+				std::cout << "Table does not contain column " << column_name << std::endl;
+				return;
+			}
+
+			for (int id = 0; id < n_values; id++) {
+				full_data_paths[id] = DATABASE_TABLES + tablename + "\\" + column_name + "\\" + data_files[id];
+			}
+
+			std::vector<seal::Ciphertext> compare_vec2 = get_compare_vec(full_data_paths, DATABASE_FOLDERS + "command\\cond_2.data", condition["operation"].asInt());
+			if (command["where"]["junction"].compare("AND") == 0) {
+				for (int id = 0; id < n_values; id++) {
+					evaluator.multiply_inplace(compare_vec[id], compare_vec2[id]);
+					evaluator.relinearize_inplace(compare_vec[id], relin_keys);
+				} 
+			}
+			else {
+				for (int id = 0; id < n_values; id++) {
+					or_inplace(compare_vec[id], compare_vec2[id]);
+				}
+			}
 		}
 
 		for (int id = 0; id < n_values; id++) {

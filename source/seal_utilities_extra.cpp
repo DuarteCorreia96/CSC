@@ -17,39 +17,9 @@ seal::SEALContext init_SEAL_Context() {
 	return context;
 }
 
-void create_keys(std::string client_name) {
-
-	if (std::filesystem::exists(CLIENT_FOLDERS + client_name + "\\secret"))
-		std::cout << "Overwriting secret key for client: " << client_name << std::endl;
-
-	if (std::filesystem::exists(CLIENT_FOLDERS + client_name + "\\public"))
-		std::cout << "Overwriting public key for client: " << client_name << std::endl;
-
-	if (std::filesystem::exists(CLIENT_FOLDERS + client_name + "\\relins"))
-		std::cout << "Overwriting relin keys for client: " << client_name << std::endl;
-
-	seal::SEALContext context = init_SEAL_Context();
-	seal::KeyGenerator keygen(context);
-
-	seal::SecretKey secret_key = keygen.secret_key();
-	seal::PublicKey public_key;
-	seal::RelinKeys relin_keys;
-
-	keygen.create_public_key(public_key);
-	keygen.create_relin_keys(relin_keys);
-
-	std::ofstream secret_out(CLIENT_FOLDERS + client_name + "\\secret", std::ios::binary);
-	std::ofstream public_out(CLIENT_FOLDERS + client_name + "\\public", std::ios::binary);
-	std::ofstream relins_out(CLIENT_FOLDERS + client_name + "\\relins", std::ios::binary);
-
-	secret_key.save(secret_out);
-	public_key.save(public_out);
-	relin_keys.save(relins_out);
-}
-
 seal::SecretKey load_SEAL_secret(seal::SEALContext context, std::string client_name) {
 
-	std::ifstream in_secret(CLIENT_FOLDERS + client_name + "\\secret", std::ios::binary);
+	std::ifstream in_secret(CLIENT_FOLDERS + client_name + "\\SEAL\\secret", std::ios::binary);
 
 	seal::SecretKey secret;
 	secret.load(context, in_secret);
@@ -59,22 +29,12 @@ seal::SecretKey load_SEAL_secret(seal::SEALContext context, std::string client_n
 
 seal::PublicKey load_SEAL_public(seal::SEALContext context, std::string client_name) {
 
-	std::ifstream in_public(CLIENT_FOLDERS + client_name + "\\public", std::ios::binary);
+	std::ifstream in_public(CLIENT_FOLDERS + client_name + "\\SEAL\\public", std::ios::binary);
 
 	seal::PublicKey public_key;
 	public_key.load(context, in_public);
 
 	return public_key;
-}
-
-seal::RelinKeys load_SEAL_relins(seal::SEALContext context, std::string client_name) {
-
-	std::ifstream in_public(CLIENT_FOLDERS + client_name + "\\relins", std::ios::binary);
-
-	seal::RelinKeys relin_keys;
-	relin_keys.load(context, in_public);
-
-	return relin_keys;
 }
 
 void save_encripted(Encrypted_int x_enc, std::ofstream& out) {

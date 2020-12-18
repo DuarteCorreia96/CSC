@@ -13,6 +13,7 @@ const std::string ADMIN_SEAL    = ADMIN_FOLDERS + "SEAL\\";
 const std::string ADMIN_CA      = ADMIN_FOLDERS + "CA\\";
 
 const std::string CLIENT_FOLDERS   = "data\\Clients\\";
+
 const std::string DATABASE_FOLDERS = "data\\Database\\";
 const std::string DATABASE_TABLES  = DATABASE_FOLDERS + "tables\\";
 const std::string DATABASE_CERTS   = DATABASE_FOLDERS + "certs\\";
