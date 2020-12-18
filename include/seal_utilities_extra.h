@@ -31,4 +31,11 @@ seal::RelinKeys load_SEAL_relins(seal::SEALContext context, std::string client_n
 
 
 void save_encripted(Encrypted_int x_enc, std::ofstream& out);
+
+Encrypted_int load_enc_int(seal::SEALContext context, std::string filepath);
 Encrypted_int load_enc_int(seal::SEALContext context, std::ifstream& in);
+
+seal::Ciphertext load_single_enc(seal::SEALContext context, std::string filepath);
+seal::Ciphertext load_single_enc(seal::SEALContext context, std::ifstream& in);
+
+std::string column_string(std::string data, int width);

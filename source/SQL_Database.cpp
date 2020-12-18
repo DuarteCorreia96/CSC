@@ -1,4 +1,5 @@
 #include "SQL_Database.h"
+#include "seal_utilities_extra.h"
 
 #include <iostream>
 #include <filesystem>
@@ -90,8 +91,9 @@ seal::Ciphertext SQL_Database::compare(std::vector<seal::Ciphertext> x, std::vec
 	evaluator.multiply(not_great, not_lesst, equal);
 	evaluator.relinearize_inplace(equal, relin_keys);
 
-	cout << "    + Noise Budget in equal: " << decryptor.invariant_noise_budget(equal) << " bits" << endl;
-	cout << "    + Noise Budget in great: " << decryptor.invariant_noise_budget(equal) << " bits" << endl;
+	if (PRINT_BUGET) {
+		cout << "    + Noise Budget in equal: " << decryptor.invariant_noise_budget(equal) << " bits" << endl;
+	}
 
 	if (     operation == '>') { return great; }
 	else if (operation == '<') { return lesst; }
@@ -132,8 +134,14 @@ void SQL_Database::create_table(std::string tablename, std::set<std::string> col
 		return;
 	}
 
+	if (columns.size() == 0) {
+		std::cout << "Column size should be atleast 1!" << std::endl;
+		return;
+	}
+
 	Json::Value table;
-	std::filesystem::create_directory(std::filesystem::path(DATABASE_FOLDERS + tablename));
+	std::filesystem::create_directory(std::filesystem::path(DATABASE_TABLES + tablename));
+	std::filesystem::create_directory(std::filesystem::path(DATABASE_TABLES + tablename + "\\__RANDOM__\\"));
 	table["n_cols"] = columns.size();
 	table["n_values"] = 0;
 	table["files"] = Json::arrayValue;
@@ -141,15 +149,15 @@ void SQL_Database::create_table(std::string tablename, std::set<std::string> col
 	int index = 0;
 	for (std::string column : columns) {
 		
-		std::filesystem::create_directory(std::filesystem::path(DATABASE_FOLDERS + tablename + "\\" + column));
+		std::filesystem::create_directory(std::filesystem::path(DATABASE_TABLES + tablename + "\\" + column));
 		table["columns"][index++] = column;
 	}
 
-	save_table(table, DATABASE_FOLDERS + tablename + "\\" + "config.json");
+	save_table(table, DATABASE_TABLES + tablename + "\\" + "config.json");
 
 }
 
-void SQL_Database::insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values) {
+void SQL_Database::insert_values(std::string tablename, std::vector<std::string> columns, std::vector<Encrypted_int> values, seal::Ciphertext random) {
 
 	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table.empty()) {
@@ -185,6 +193,10 @@ void SQL_Database::insert_values(std::string tablename, std::vector<std::string>
 		save_encripted(values[i], out);
 		out.close();
 	}
+
+	std::ofstream out(DATABASE_TABLES + tablename + "\\__RANDOM__\\" + filename, std::ios::binary);
+	random.save(out);
+	out.close();
 	
 	table["files"].append(new_id);
 	table["n_values"] = table["n_values"].asInt() + 1;
@@ -216,4 +228,83 @@ void SQL_Database::delete_line(std::string tablename, int linenum) {
 	}
 
 	save_table(table, DATABASE_TABLES + tablename + "\\" + "config.json");
+}
+
+
+
+void SQL_Database::select(std::string tablename, Json::Value command, SQL_Client &client) {
+
+	Json::Value table_json = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
+	if (table_json.empty()) {
+		return;
+	}
+
+	int n_values = table_json["n_values"].asInt();
+	int n_column = command["columns"].size();
+
+	std::set<std::string> columns_set;
+	for (Json::Value col : table_json["columns"]) {
+		columns_set.insert(col.asString());
+	}
+
+	int index = 0;
+	std::vector<std::string> columns(n_column);
+	for (Json::Value col : command["columns"]) {
+
+		if (not (columns_set.find(col.asString()) != columns_set.end())) {
+			std::cout << "Table does not contain column " << col.asString() << std::endl;
+			return;
+		}
+
+		columns[index++] = col.asString();
+	}
+
+	std::vector<std::string> data_files(n_values);
+	std::vector<seal::Ciphertext> random_enc(n_values);
+	std::vector<std::vector<Encrypted_int>> table_enc(n_values, std::vector<Encrypted_int>(n_column));
+	for (int id = 0; id < n_values; id++) {
+
+		data_files[id] = std::to_string(table_json["files"][id].asInt()) + ".data";
+		random_enc[id] = load_single_enc(context, DATABASE_TABLES + tablename + "\\__RANDOM__\\" + data_files[id]);
+		
+		int index = 0;
+		for (std::string col : columns) {
+			table_enc[id][index++] = load_enc_int(context, DATABASE_TABLES + tablename + "\\" + col + "\\" + data_files[id]);
+		}
+	}
+
+	// Comparing function
+	std::vector<seal::Ciphertext> compare_vec(n_values);
+	if (command["where"]["condition_1"] != Json::nullValue) {
+
+		char operation = command["where"]["condition_1"]["operation"].asInt();
+		std::string column_name = command["where"]["condition_1"]["variable"].asString();
+		
+		if (not (columns_set.find(column_name) != columns_set.end())) {
+			std::cout << "Table does not contain column " << column_name << std::endl;
+			return;
+		}
+
+		Encrypted_int to_compare = load_enc_int(context, DATABASE_FOLDERS + "command\\cond_1.data");
+
+		std::vector<Encrypted_int> column_enc(n_values);
+		for (int id = 0; id < n_values; id++) {
+			
+			column_enc[id]  = load_enc_int(context, DATABASE_TABLES + tablename + "\\" + column_name + "\\" + data_files[id]);
+			compare_vec[id] = compare(column_enc[id].bin_vec, to_compare.bin_vec, operation);
+		}
+
+		for (int id = 0; id < n_values; id++) {
+			for (int col = 0; col < n_column; col++) {
+
+				evaluator.multiply_inplace(table_enc[id][col].value, compare_vec[id]);
+				evaluator.multiply_inplace(random_enc[id], compare_vec[id]);
+
+				evaluator.relinearize_inplace(table_enc[id][col].value, relin_keys);
+				evaluator.relinearize_inplace(random_enc[id], relin_keys);
+			}
+		}
+	}
+
+	client.print_table(table_enc, columns, random_enc);
 }
