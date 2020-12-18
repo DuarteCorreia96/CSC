@@ -131,11 +131,11 @@ string server_decrypt() {
 	// put the content of the file in a string
 	ifstream t("..\\data\\server\\encrypted.txt"); //taking file as inputstream
 	string str;
-	if (t) {
-		ostringstream ss;
-		ss << t.rdbuf(); // reading data
-		str = ss.str();
-	}
+	//if (t) {
+	//	ostringstream ss;
+	//	ss << t.rdbuf(); // reading data
+	//	str = ss.str();
+	//}
 
 	return str;
 }

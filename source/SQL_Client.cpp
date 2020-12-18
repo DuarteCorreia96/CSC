@@ -5,6 +5,19 @@
 #include <string>
 #include <sstream>
 
+seal::Ciphertext SQL_Client::get_random_enc() {
+
+	std::mt19937 rng(rd());
+	std::uniform_int_distribution<int> uni(1, PLAIN_MOD);
+
+	int x = uni(rng);
+	seal::Ciphertext x_enc{};
+	encryptor.encrypt(seal::Plaintext(std::to_string(x)), x_enc);
+
+	return x_enc;
+}
+
+
 Encrypted_int SQL_Client::encrypt_int(__int64 x) {
 
 	Encrypted_int x_enc{};
@@ -51,4 +64,35 @@ Decrypted_int SQL_Client::decrypt_int(Encrypted_int x_enc) {
 	x_dec.value = std::atoi(aux_plain.to_string().c_str());
 
 	return x_dec;
+}
+
+void SQL_Client::print_table(std::vector<std::vector<Encrypted_int>> table_enc, 
+	std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc) {
+
+	int id_width = 6;
+	int column_width = 15;
+
+	std::cout << std::endl;
+	std::cout << column_string("ID", id_width) << "|";
+	for (int col = 0; col < table_enc[0].size(); col++) {
+		std::cout << column_string(columns[col], column_width) << "|";
+	} std::cout << std::endl;
+
+	for (int id = 0; id < table_enc.size(); id++) {
+
+		seal::Plaintext plain;
+		decryptor.decrypt(random_enc[id], plain);
+		if (plain.to_string().compare("0") == 0) {
+			continue;
+		}
+
+		std::cout << column_string(std::to_string(id + 1), id_width) << "|";
+		for (int col = 0; col < table_enc[0].size(); col++) {
+
+			Decrypted_int aux = decrypt_int(table_enc[id][col]);
+			std::cout << column_string(std::to_string(aux.value), column_width) << "|";
+
+		} std::cout << std::endl;
+	}
+	std::cout << std::endl;
 }

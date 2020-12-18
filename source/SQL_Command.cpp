@@ -86,13 +86,14 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         return;
     }
 
-    to_uppercase(command_vector, 1);
-    if (command_vector[1].size() > 5 && command_vector[1].compare(0, 4, "SUM(") == 0 && command_vector[1].back() == ')') {
+    aux_str = command_vector[1];
+    to_uppercase_str(aux_str);
+    if (command_vector[1].size() > 5 && aux_str.compare(0, 4, "SUM(") == 0 && aux_str.back() == ')') {
             
         command_json["columns"][0] = command_vector[1].substr(4, command_vector[1].size() - 5);
         command_json["function"] = "SELECT_SUM";
 
-    } else if (command_vector[1].compare("LINE") == 0) {
+    } else if (aux_str.compare("LINE") == 0) {
 
         if (command_vector.size() > 5) {
             return;

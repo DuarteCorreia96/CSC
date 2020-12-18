@@ -17,7 +17,7 @@ seal::SEALContext init_SEAL_Context() {
 	return context;
 }
 
-void inline create_keys(std::string client_name) {
+void create_keys(std::string client_name) {
 
 	if (std::filesystem::exists(CLIENT_FOLDERS + client_name + "\\secret"))
 		std::cout << "Overwriting secret key for client: " << client_name << std::endl;
@@ -86,6 +86,42 @@ void save_encripted(Encrypted_int x_enc, std::ofstream& out) {
 	}
 }
 
+seal::Ciphertext load_single_enc(seal::SEALContext context, std::string filepath) {
+
+	seal::Ciphertext x_enc{};
+
+	std::ifstream in(filepath, std::ios::binary);
+	x_enc.load(context, in);
+
+	in.close();
+	return x_enc;
+}
+
+seal::Ciphertext load_single_enc(seal::SEALContext context, std::ifstream& in) {
+
+	seal::Ciphertext x_enc{};
+	x_enc.load(context, in);
+
+	return x_enc;
+}
+
+
+Encrypted_int load_enc_int(seal::SEALContext context, std::string filepath) {
+
+	Encrypted_int x_enc{};
+
+	std::ifstream in(filepath, std::ios::binary);
+	x_enc.value.load(context, in);
+
+	x_enc.bin_vec.resize(N_BITS);
+	for (int i = 0; i < N_BITS; i++) {
+		x_enc.bin_vec[i].load(context, in);
+	}
+
+	in.close();
+	return x_enc;
+}
+
 Encrypted_int load_enc_int(seal::SEALContext context, std::ifstream& in) {
 
 	Encrypted_int x_enc{};
@@ -98,4 +134,13 @@ Encrypted_int load_enc_int(seal::SEALContext context, std::ifstream& in) {
 	}
 
 	return x_enc;
+}
+
+std::string column_string(std::string data, int width) {
+
+	int in_len = data.size();
+	int pad_left  = (width - in_len) / 2;
+	int pad_right = width  - pad_left - in_len;
+
+	return std::string(" ", pad_left) + data + std::string(" ", pad_right);
 }
