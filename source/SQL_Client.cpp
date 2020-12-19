@@ -165,30 +165,48 @@ void SQL_Client::unpack_response() {
 	Json::parseFromStream(rbuilder, json_parse, &response, &err);
 
 	std::cout << response["response"].asString() << std::endl;
-	if (not response["valid"].asBool()) { return; }
-	if (response["function"].asString().compare("SELECT") != 0) { return; }
+	if (not response["valid"].asBool()) { in.close(); return; }
 
-	int n_values = response["n_values"].asInt();
-	int n_column = response["n_column"].asInt();
+	std::string function = response["function"].asString();
 
-	std::vector<std::string> columns(n_column);
-	for (int col = 0; col < n_column; col++) {
-		columns[col] = response["columns"][col].asString();
-	}
+	bool select_col = function.compare("SELECT") == 0;
+	bool select_sum = function.compare("SELECT_SUM") == 0;
+	if (not (select_col || select_sum)) { in.close(); return; }
 
-	std::vector<seal::Ciphertext> random_enc(n_values);
-	std::vector<std::vector<seal::Ciphertext>> table_enc(n_values, std::vector<seal::Ciphertext>(n_column));
+	if (select_col) {
+		int n_values = response["n_values"].asInt();
+		int n_column = response["n_column"].asInt();
 
-	for (int id = 0; id < n_values; id++) {
-		random_enc[id].load(context, in);
-	}
-
-	for (int id = 0; id < n_values; id++) {
+		std::vector<std::string> columns(n_column);
 		for (int col = 0; col < n_column; col++) {
-			table_enc[id][col].load(context, in);
-		} 
-	}
-	in.close();
+			columns[col] = response["columns"][col].asString();
+		}
 
-	print_table(table_enc, columns, random_enc);
+		std::vector<seal::Ciphertext> random_enc(n_values);
+		std::vector<std::vector<seal::Ciphertext>> table_enc(n_values, std::vector<seal::Ciphertext>(n_column));
+
+		for (int id = 0; id < n_values; id++) {
+			random_enc[id].load(context, in);
+		}
+
+		for (int id = 0; id < n_values; id++) {
+			for (int col = 0; col < n_column; col++) {
+				table_enc[id][col].load(context, in);
+			} 
+		}
+
+		print_table(table_enc, columns, random_enc);
+	}
+
+	if (select_sum) {
+		seal::Ciphertext sum;
+		seal::Plaintext plain;
+
+		sum.load(context, in);
+		decryptor.decrypt(sum, plain);
+
+		std::cout << std::endl << "Sum is equal to:\t" << plain.to_string() << std::endl << std::endl << std::endl;
+	}
+
+	in.close();
 }

@@ -34,10 +34,10 @@ SQL_Command::parse(std::string command) {
     }
 
     if (command_json["valid"].asBool()) {
-        std::cout << "\nCommand correctly parsed!\n" << std::endl;
+        std::cout << "Command correctly parsed!" << std::endl;
     }
     else {
-        std::cout << "\nCommand not valid!\n" << std::endl;
+        std::cout << "Command not valid!" << std::endl;
     }
 }
 

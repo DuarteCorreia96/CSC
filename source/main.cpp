@@ -73,10 +73,13 @@ int main() {
 
 	//process_command(create, db, client);
 	//process_command(insert_1, db, client);
-	process_command(insert_2, db, client);
+	//process_command(insert_2, db, client);
 	//process_command(insert_3, db, client);
 
 	select = "SELECT col1, col2, col3 FROM Table1";
+	process_command(select, db, client);
+
+	select = "SELECT SUM(col1) FROM Table1 WHERE col1 < 2 OR col2 > 2";
 	process_command(select, db, client);
 
 	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 < 2 OR col2 > 2";

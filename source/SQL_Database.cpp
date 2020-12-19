@@ -260,9 +260,12 @@ void SQL_Database::delete_line(Json::Value command) {
 std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::string> full_data_paths, Encrypted_int to_compare, char operation) {
 
 	std::vector<seal::Ciphertext> compare_vec(full_data_paths.size());
+
+	std::cout << "Starting Comparisons ";
 	for (int id = 0; id < compare_vec.size(); id++) {
 		compare_vec[id] = compare(load_enc_int(context, full_data_paths[id]).bin_vec, to_compare.bin_vec, operation);
-	}
+		std::cout << "..";
+	} std::cout << " Done!" << std::endl;
 
 	return compare_vec;
 }
@@ -368,14 +371,27 @@ void SQL_Database::select(Json::Value command) {
 				evaluator.relinearize_inplace(random_enc[id], relin_keys);
 			}
 		}
+	} 
+
+	bool select_col = command["function"].asString().compare("SELECT") == 0;
+	bool select_sum = not select_col;
+	
+	seal::Ciphertext sum = table_enc[0][0].value;
+	if (select_sum) {
+		for (int id = 1; id < n_values; id++) {
+			evaluator.add_inplace(sum, table_enc[id][0].value);
+		}
+	}
+
+	if (select_col) {
+		response["n_column"] = n_column;
+		response["n_values"] = n_values;
+		for (int col = 0; col < n_column; col++) {
+			response["columns"][col] = columns[col];
+		}
 	}
 
 	response["valid"] = true;
-	response["n_column"] = n_column;
-	response["n_values"] = n_values;
-	for (int col = 0; col < n_column; col++) {
-		response["columns"][col] = columns[col];
-	}
 
 	Json::StreamWriterBuilder builder;
 	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
@@ -385,15 +401,23 @@ void SQL_Database::select(Json::Value command) {
 	out << std::endl;
 
 	out << " ====== Values below: ====== " << std::endl;
-	for (seal::Ciphertext random : random_enc) {
-		random.save(out);
+
+	if (select_col) {
+		for (seal::Ciphertext random : random_enc) {
+			random.save(out);
+		}
+
+		for (int id = 0; id < n_values; id++) {
+			for (int col = 0; col < n_column; col++) {
+				table_enc[id][col].value.save(out);
+			}
+		} out << std::endl;
 	}
 
-	for (int id = 0; id < n_values; id++) {
-		for (int col = 0; col < n_column; col++) {
-			table_enc[id][col].value.save(out);
-		}
-	} out << std::endl;
+	if (select_sum) {
+		sum.save(out);
+	}
+
 	out.close();
 }
 
