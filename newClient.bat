@@ -33,8 +33,10 @@ openssl rsa -in %client_path%private-key.pem -pubout > %client_path_in_db_folder
 :: send server's certificate to a client
 copy %server_cert_path%server-cert.pem %client_path%
 
+:: verify server's certificate
+openssl verify -verbose -CAfile %client_path%CA-cert.pem  %client_path%server-cert.pem
+
 :: obtain the public key of the server
-ECHO hi
 openssl x509 -pubkey -noout -in %client_path%server-cert.pem  > %client_path%server-public-key.pem
 	
 	
