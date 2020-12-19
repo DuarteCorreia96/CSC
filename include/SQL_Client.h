@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <random>
+#include <json/json.h>
 
 class SQL_Client {
 
@@ -33,6 +34,8 @@ public:
 	Encrypted_int encrypt_int(__int64 x);
 	Decrypted_int decrypt_int(Encrypted_int x_enc);
 
-	void print_table(std::vector<std::vector<Encrypted_int>> table_enc, std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc);
+	void print_table(std::vector<std::vector<seal::Ciphertext>> table_enc, std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc);
+	void pack_command(Json::Value command);
+	void unpack_response();
 };
 

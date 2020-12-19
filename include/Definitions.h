@@ -18,4 +18,6 @@ const std::string DATABASE_FOLDERS = "data\\Database\\";
 const std::string DATABASE_TABLES  = DATABASE_FOLDERS + "tables\\";
 const std::string DATABASE_CERTS   = DATABASE_FOLDERS + "certs\\";
 
+const std::string SWAP_FOLDER = "data\\swap\\";
+
 const bool PRINT_BUGET = false;

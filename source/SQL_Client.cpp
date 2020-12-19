@@ -66,7 +66,7 @@ Decrypted_int SQL_Client::decrypt_int(Encrypted_int x_enc) {
 	return x_dec;
 }
 
-void SQL_Client::print_table(std::vector<std::vector<Encrypted_int>> table_enc, 
+void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_enc, 
 	std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc) {
 
 	int id_width = 6;
@@ -78,9 +78,9 @@ void SQL_Client::print_table(std::vector<std::vector<Encrypted_int>> table_enc,
 		std::cout << column_string(columns[col], column_width) << "|";
 	} std::cout << std::endl;
 
+	seal::Plaintext plain;
 	for (int id = 0; id < table_enc.size(); id++) {
 
-		seal::Plaintext plain;
 		decryptor.decrypt(random_enc[id], plain);
 		if (plain.to_string().compare("0") == 0) {
 			continue;
@@ -89,10 +89,106 @@ void SQL_Client::print_table(std::vector<std::vector<Encrypted_int>> table_enc,
 		std::cout << column_string(std::to_string(id + 1), id_width) << "|";
 		for (int col = 0; col < table_enc[0].size(); col++) {
 
-			Decrypted_int aux = decrypt_int(table_enc[id][col]);
-			std::cout << column_string(std::to_string(aux.value), column_width) << "|";
+			decryptor.decrypt(table_enc[id][col], plain);
+			std::cout << column_string(plain.to_string(), column_width) << "|";
 
 		} std::cout << std::endl;
 	}
 	std::cout << std::endl;
+}
+
+void SQL_Client::pack_command(Json::Value command) {
+
+	std::ofstream out(SWAP_FOLDER + "request.txt", std::ios::binary);
+
+	Json::Value value_cond_1;
+	Json::Value value_cond_2;
+
+	if (command.isMember("where")) {
+		if (command["where"].isMember("condition_1")) {
+			command["where"]["condition_1"].removeMember("value", &value_cond_1);
+		}
+
+		if (command["where"].isMember("condition_2")) {
+			command["where"]["condition_2"].removeMember("value", &value_cond_2);
+		}
+	}
+
+	Json::Value values;
+	if (command.isMember("values")) {
+
+		values = command["values"];
+		command["values"]   = values.size();
+	}
+
+	Json::StreamWriterBuilder builder;
+	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+	writer->write(command, &out);
+	out << std::endl;
+
+	out << " ====== Values below: ====== " << std::endl;
+	if (value_cond_1 != Json::nullValue) {
+		save_encripted(encrypt_int(value_cond_1.asInt()), out);
+	}
+
+	if (value_cond_2 != Json::nullValue) {
+		save_encripted(encrypt_int(value_cond_1.asInt()), out);
+	}
+
+	if (values != Json::nullValue) {
+		seal::Ciphertext random = get_random_enc();
+		random.save(out);
+		for (Json::Value value : values) {
+			save_encripted(encrypt_int(value.asInt()), out);
+		}
+	} out << std::endl;
+	out.close();
+}
+
+void SQL_Client::unpack_response() {
+
+	std::ifstream in(SWAP_FOLDER + "response.txt", std::ios::binary);
+
+	std::string aux, json_string;
+	while (aux.compare(" ====== Values below: ====== ") != 0 && in.peek() != EOF) {
+
+		std::getline(in, aux);
+		json_string.append(aux);
+		json_string.append("\n");
+	}
+
+	JSONCPP_STRING err;
+	Json::CharReaderBuilder rbuilder;
+	std::stringstream json_parse(json_string);
+
+	Json::Value response;
+	Json::parseFromStream(rbuilder, json_parse, &response, &err);
+
+	std::cout << response["response"].asString() << std::endl;
+	if (not response["valid"].asBool()) { return; }
+	if (response["function"].asString().compare("SELECT") != 0) { return; }
+
+	int n_values = response["n_values"].asInt();
+	int n_column = response["n_column"].asInt();
+
+	std::vector<std::string> columns(n_column);
+	for (int col = 0; col < n_column; col++) {
+		columns[col] = response["columns"][col].asString();
+	}
+
+	std::vector<seal::Ciphertext> random_enc(n_values);
+	std::vector<std::vector<seal::Ciphertext>> table_enc(n_values, std::vector<seal::Ciphertext>(n_column));
+
+	for (int id = 0; id < n_values; id++) {
+		random_enc[id].load(context, in);
+	}
+
+	for (int id = 0; id < n_values; id++) {
+		for (int col = 0; col < n_column; col++) {
+			table_enc[id][col].load(context, in);
+		} 
+	}
+	in.close();
+
+	print_table(table_enc, columns, random_enc);
 }

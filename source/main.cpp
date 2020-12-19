@@ -20,6 +20,15 @@
 using namespace std;
 using namespace seal;
 
+void process_command(std::string command, SQL_Database &db, SQL_Client &client) {
+
+	std::cout << command << std::endl;
+	SQL_Command function(command);
+	client.pack_command(function.get_command_json());
+	db.unpack_command();
+	client.unpack_response();
+}
+
 int main() {
 
 	//int tot_clients = 0;
@@ -55,56 +64,32 @@ int main() {
 	SQL_Database db(context, secret_key);
 	SQL_Client client(client_name, context, public_key, secret_key);
 
-
-	string tablename = "Table1";
-	set<string> columns_set{"col1", "col2", "col3"};
-	vector<string> columns{"col1", "col2", "col3"};
-	vector<Encrypted_int> values;
-
-	seal::Ciphertext random = client.get_random_enc();
-	values.push_back(client.encrypt_int(2));
-	values.push_back(client.encrypt_int(1));
-	values.push_back(client.encrypt_int(1));
-
-	//db.create_table(tablename,  columns_set);
-	//db.insert_values(tablename, columns, values, random);
-	//db.delete_line(tablename, 2);
-
-	// Saving values to compare encrypted should be done on unpack command after
-	{
-		std::string filepath_1 = DATABASE_FOLDERS + "command\\cond_1.data";
-		std::string filepath_2 = DATABASE_FOLDERS + "command\\cond_2.data";
-
-		std::ofstream out_1(filepath_1, std::ios::binary);
-		std::ofstream out_2(filepath_2, std::ios::binary);
-
-		save_encripted(client.encrypt_int(2), out_1);
-		save_encripted(client.encrypt_int(3), out_2);
-
-		out_1.close();
-		out_2.close();
-	}
-
-	// Test command
-	std::string select = "SELECT col1, col2, col3 FROM Table1";
-	std::cout << select << std::endl;
+	std::string create = "CREATE TABLE Table1 (col1, col2, col3)";
+	std::string insert_1 = "INSERT INTO TABLE Table1 (col1, col2, col3) VALUES (1, 2, 3)";
+	std::string insert_2 = "INSERT INTO TABLE Table1 (col1, col2, col3) VALUES (2, 3, 4)";
+	std::string insert_3 = "INSERT INTO TABLE Table1 (col1, col2, col3) VALUES (2, 1, 4)";
+	std::string select;
 
 
-	SQL_Command function{select};
-	db.select(tablename, function.get_command_json(), client);
+	//process_command(create, db, client);
+	//process_command(insert_1, db, client);
+	process_command(insert_2, db, client);
+	//process_command(insert_3, db, client);
 
+	select = "SELECT col1, col2, col3 FROM Table1";
+	process_command(select, db, client);
 
-	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2 AND col3 = 3";
-	std::cout << select << std::endl;
+	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 < 2 OR col2 > 2";
+	process_command(select, db, client);
 
-	function.parse(select);
-	db.select(tablename, function.get_command_json(), client);
+	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2 AND col2 > 2";
+	process_command(select, db, client);
 
-	select = "SELECT col1, col2, col3 FROM Table1 WHERE col1 = 2 OR col3 = 3";
-	std::cout << select << std::endl;
+	//select = "DELETE 2 FROM Table1";
+	//process_command(select, db, client);
 
-	function.parse(select);
-	db.select(tablename, function.get_command_json(), client);
+	//select = "SELECT col1, col2, col3 FROM Table1";
+	//process_command(select, db, client);
 }
 
  
