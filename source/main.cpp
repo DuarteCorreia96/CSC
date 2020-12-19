@@ -95,4 +95,26 @@ int main() {
 	//process_command(select, db, client);
 }
 
- 
+// openssl rsautl - sign - inkey client-private-key.pem - in files\teste.txt - out files\teste.out
+
+void sign_Message(std::string private_key, std::string input_file, std::string output_file) {
+
+	std::string command = "openssl rsautl -sign -inkey " + private_key + " -in " + input_file + " -out " + output_file;
+	system(command.c_str());
+}
+
+//openssl rsautl - raw - pubin - inkey server - public - key.pem - in files\teste.out - out files\teste.enc
+void encrypt_Message(std::string public_key, std::string input_file, std::string output_file) {
+
+	std::string command = "openssl rsautl -raw -encrypt -pubin -inkey " + public_key + " -in " + input_file + " -out " + output_file;
+	system(command.c_str());
+}
+
+
+/*
+	openssl rsautl -sign -inkey client-private-key.pem          -in files\teste.txt -out files\teste.signed
+	openssl rsautl -raw -encrypt -pubin -inkey server-public-key.pem -in files\teste.signed -out files\teste.enc
+
+	openssl rsautl -raw -decrypt -inkey server-key.pem               -in files\teste.enc -out files\teste.dec
+	openssl rsautl -verify -pubin -inkey client-public-key.pem  -in files\teste.dec -out files\out.txt
+*/

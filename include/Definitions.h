@@ -21,3 +21,9 @@ const std::string DATABASE_CERTS   = DATABASE_FOLDERS + "certs\\";
 const std::string SWAP_FOLDER = "data\\swap\\";
 
 const bool PRINT_BUGET = false;
+
+const int RSA_SIZE = 4096;
+const std::string CA_CERTIFICATE = "CA-cert.crt";
+const std::string DATABASE_CERTIFICATE = "server-cert.crt";
+
+
