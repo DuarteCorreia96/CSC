@@ -2,7 +2,7 @@
 
 
 void admistrator(int tot_clients) {
-
+	/*
 	std::string CA_path = ADMIN_FOLDERS + "CA\\";
 
 	// create server's directory
@@ -26,7 +26,7 @@ void admistrator(int tot_clients) {
 
 	// the certificate from our CA is used to sign the server's certificate
 	system("openssl x509 -req -days 365 -in ..\\data\\CA\\signingReq.csr -CA ..\\data\\CA\\CA-cert.pem -CAkey ..\\data\\CA\\CA-key.pem -CAcreateserial -out ..\\data\\server\\server-cert.pem");
-
+*/
 };
 
 
