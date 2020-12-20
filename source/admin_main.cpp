@@ -31,5 +31,4 @@ int main(){
 
 	client_name = "admin";
 	generate_Clients(CLIENT_FOLDERS + client_name + "\\certs\\", "client-cert.crt", client_name);
-
 }

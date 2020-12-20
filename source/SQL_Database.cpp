@@ -151,6 +151,7 @@ Json::Value SQL_Database::load_table(std::string path) {
 
 	in >> table;
 	in.close();
+	return table;
 }
 
 void SQL_Database::create_table(Json::Value command) {
