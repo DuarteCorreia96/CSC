@@ -37,11 +37,8 @@ SQL_Command::parse(std::string command) {
         (this->*(x->second))(command_vector);
     }
 
-    if (command_json["valid"].asBool()) {
-        std::cout << "Command correctly parsed!" << std::endl;
-    }
-    else {
-        std::cout << "Command not valid!" << std::endl;
+    if (not command_json["valid"].asBool()) {
+        std::cout << std::endl << "Command not valid!" << std::endl << std::endl;
     }
 }
 

@@ -88,10 +88,10 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 	std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc, int linenum) {
 
 	int id_width = 6;
-	int column_width = 15;
+	int column_width = 19;
 
 	// Print Header
-	std::cout << std::endl;
+	std::cout << "All values from columns are printed in hexadecimal!" << std::endl << std::endl;
 	std::cout << column_string("ID", id_width) << "|";
 	for (int col = 0; col < table_enc[0].size(); col++) {
 		std::cout << column_string(columns[col], column_width) << "|";
@@ -261,7 +261,7 @@ void SQL_Client::unpack_response() {
 		sum.load(context, in);
 		decryptor.decrypt(sum, plain);
 
-		std::cout << std::endl << "Sum is equal to:\t" << plain.to_string() << std::endl << std::endl << std::endl;
+		std::cout << std::endl << "Sum is equal to:\t0x" << plain.to_string() << std::endl << std::endl << std::endl;
 	}
 
 	in.close();
