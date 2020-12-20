@@ -9,8 +9,12 @@
 
 class SQL_Command;
 typedef void (SQL_Command::* sql_t)(std::vector<std::string> command_vector);
-typedef std::map<std::string, sql_t> sql_map_t;
 
+/// <summary>
+/// Map of strings to functions from class SQL_Command that return void and receive a vector of strings
+/// of a command.
+/// </summary>
+typedef std::map<std::string, sql_t> sql_map_t;
 
 /// <summary> 
 /// <para> <c>SQL_Command</c> is used to parse a SQL command! </para> 
@@ -61,7 +65,16 @@ private:
 
 public:
 
+	/// <summary>
+	/// Creates a SQL_Command and parses the input command.
+	/// </summary>
+	/// <param name="command">String of the command to be parsed.</param>
 	SQL_Command(std::string command);
+
+	/// <summary>
+	///  Creates a SQL_Command
+	/// </summary>
+	SQL_Command() {};
 
 	/// <summary>
 	/// Parse a SQL Command.
@@ -69,11 +82,33 @@ public:
 	/// <param name="command"> String of the command to be parsed. </param>
 	void parse(std::string command);
 
-
+	/// <summary>
+	/// Function used to parse a select function.
+	/// </summary>
+	/// <param name="command_vector">Vector containing the string.</param>
 	void select(std::vector<std::string> command_vector);
+
+	/// <summary>
+	/// Function used to parse a create table function.
+	/// </summary>
+	/// <param name="command_vector">Vector containing the string.</param>
 	void create_table(std::vector<std::string> command_vector);
+
+	/// <summary>
+	/// Function used to parse a insert function.
+	/// </summary>
+	/// <param name="command_vector">Vector containing the string.</param>
 	void insert_table(std::vector<std::string> command_vector);
+
+	/// <summary>
+	/// Function used to parse a delete function.
+	/// </summary>
+	/// <param name="command_vector">Vector containing the string.</param>
 	void delete_from (std::vector<std::string> command_vector);
 	
+	/// <summary>
+	/// Method to get the parsed command.
+	/// </summary>
+	/// <returns>Json::Value containing the information of the parsed command. </returns>
 	Json::Value get_command_json() { return command_json; };
 };

@@ -36,20 +36,21 @@ void SQL_Database::load_session_key(std::string client_name) {
 	}
 }
 
-void SQL_Database::not_inplace(seal::Ciphertext &encrypted) {
-
-	evaluator.negate_inplace(encrypted);
-	evaluator.add_plain_inplace(encrypted, plain_one);
-}
-
 void SQL_Database::not_(seal::Ciphertext &encrypted, seal::Ciphertext &destination) {
 
 	evaluator.negate(encrypted, destination);
 	evaluator.add_plain_inplace(destination, plain_one);
 }
 
+void SQL_Database::not_inplace(seal::Ciphertext &encrypted) {
+
+	evaluator.negate_inplace(encrypted);
+	evaluator.add_plain_inplace(encrypted, plain_one);
+}
+
 void SQL_Database::or_(seal::Ciphertext &encrypted_1, seal::Ciphertext &encrypted_2, seal::Ciphertext &destination) {
 
+	// a OR b = NOT (NOT a AND NOT b)
 	seal::Ciphertext aux_1, aux_2;
 
 	not_(encrypted_1, aux_1);
@@ -62,6 +63,7 @@ void SQL_Database::or_(seal::Ciphertext &encrypted_1, seal::Ciphertext &encrypte
 
 void SQL_Database::or_inplace(seal::Ciphertext &encrypted_1, seal::Ciphertext &encrypted_2) {
 
+	// a OR b = NOT (NOT a AND NOT b)
 	seal::Ciphertext aux_1, aux_2;
 
 	not_(encrypted_1, aux_1);
@@ -74,6 +76,9 @@ void SQL_Database::or_inplace(seal::Ciphertext &encrypted_1, seal::Ciphertext &e
 }
 
 seal::Ciphertext SQL_Database::compare(std::vector<seal::Ciphertext> x, std::vector<seal::Ciphertext> y, char operation) {
+
+	// For every bit it checks if it's > or <  and saves a global bit for > and < if this bit is true it cannot be overriden
+	// If global > is true then global < cannot be true. At the end if it's not < or > then it's =
 
 	using namespace std;
 	seal::Ciphertext great, lesst, equal;
@@ -128,6 +133,19 @@ seal::Ciphertext SQL_Database::compare(std::vector<seal::Ciphertext> x, std::vec
 	return blank;
 }
 
+std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::string> full_data_paths, Encrypted_int to_compare, char operation) {
+
+	std::vector<seal::Ciphertext> compare_vec(full_data_paths.size());
+
+	std::cout << "Starting Comparisons ";
+	for (int id = 0; id < compare_vec.size(); id++) {
+		compare_vec[id] = compare(load_enc_int(context, full_data_paths[id]).bin_vec, to_compare.bin_vec, operation);
+		std::cout << "..";
+	} std::cout << " Done!" << std::endl;
+
+	return compare_vec;
+}
+
 void SQL_Database::save_table(Json::Value table, std::string path) {
 
 	Json::StreamWriterBuilder builder;
@@ -156,15 +174,16 @@ Json::Value SQL_Database::load_table(std::string path) {
 
 void SQL_Database::create_table(Json::Value command) {
 
+	// Checks for validity
 	std::string tablename = command["table"].asString();
-	std::set<std::string> columns;
-	for (Json::Value column : command["columns"]) {
-		columns.insert(column.asString());
-	}
-
 	if (std::filesystem::exists(DATABASE_TABLES + tablename)) {
 		response["response"] = "Table already exists!";
 		return;
+	}
+
+	std::set<std::string> columns;
+	for (Json::Value column : command["columns"]) {
+		columns.insert(column.asString());
 	}
 
 	if (columns.size() == 0) {
@@ -172,6 +191,7 @@ void SQL_Database::create_table(Json::Value command) {
 		return;
 	}
 
+	// Creates table and directories
 	Json::Value table;
 	std::filesystem::create_directory(std::filesystem::path(DATABASE_TABLES + tablename));
 	std::filesystem::create_directory(std::filesystem::path(DATABASE_TABLES + tablename + "\\__RANDOM__\\"));
@@ -194,14 +214,14 @@ void SQL_Database::create_table(Json::Value command) {
 void SQL_Database::insert_values(Json::Value command) {
 
 	std::string tablename = command["table"].asString();
-	std::vector<std::string> columns(command["columns"].size());
-	for (int col = 0; col < (int) command["columns"].size(); col++) {
-		columns[col] = command["columns"][col].asString();
-	}
-
 	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table.empty()) {
 		return;
+	}
+
+	std::vector<std::string> columns(command["columns"].size());
+	for (int col = 0; col < (int) command["columns"].size(); col++) {
+		columns[col] = command["columns"][col].asString();
 	}
 
 	// Verify if all columns have values to fill
@@ -222,11 +242,11 @@ void SQL_Database::insert_values(Json::Value command) {
 		return;
 	}
 
+	// Starts insertion
 	int n_values = table["n_values"].asInt();
 	int new_id   = n_values == 0 ? 1 : table["files"][n_values - 1].asInt() + 1;
 
 	std::string filename = std::to_string(new_id) + ".data";
-
 	for (int i = 0; i < columns.size(); i++) {
 
 		std::ofstream out(DATABASE_TABLES + tablename + "\\" + columns[i] + "\\" + filename, std::ios::binary);
@@ -249,18 +269,18 @@ void SQL_Database::insert_values(Json::Value command) {
 void SQL_Database::delete_line(Json::Value command) {
 
 	std::string tablename = command["table"].asString();
-	int linenum = command["linenum"].asInt();
-
 	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table.empty()) {
 		return;
 	}
 
+	int linenum = command["linenum"].asInt();
 	if (table["n_values"] < linenum) {
 		response["response"] = "Line number too high!";
 		return;
 	}
 
+	// Deletes line
 	Json::Value file_ID;
 	table["files"].removeIndex(linenum - 1, &file_ID);
 	table["n_values"] = table["n_values"].asInt() - 1;
@@ -281,26 +301,27 @@ void SQL_Database::delete_line(Json::Value command) {
 void SQL_Database::select_line(Json::Value command) {
 
 	std::string tablename = command["table"].asString();
-	int linenum = command["linenum"].asInt();
-
 	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table.empty()) {
 		return;
 	}
 
+	int linenum = command["linenum"].asInt();
 	if (table["n_values"] < linenum) {
 		response["response"] = "Line number too high!";
 		return;
 	}
 
+	// Starts line select
 	std::string filename = std::to_string(table["files"][linenum - 1].asInt()) + ".data";
 
+	// Loads random
 	seal::Ciphertext random;
 	std::ifstream random_in(DATABASE_TABLES + tablename + "\\__RANDOM__\\" + filename, std::ios::binary);
 	random.load(context, random_in);
 	random_in.close();
 
-
+	// Loads line
 	int n_columns = table["n_cols"].asInt();
 	std::vector<seal::Ciphertext> vector_enc(n_columns);
 	for (int col = 0; col < n_columns; col++) {
@@ -311,6 +332,7 @@ void SQL_Database::select_line(Json::Value command) {
 		in.close();
 	}
 
+	// Writes and encrypts response
 	response["linenum"]  = linenum;
 	response["n_column"] = n_columns;
 	response["n_values"] = 1;
@@ -336,21 +358,9 @@ void SQL_Database::select_line(Json::Value command) {
 	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }
 
-std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::string> full_data_paths, Encrypted_int to_compare, char operation) {
-
-	std::vector<seal::Ciphertext> compare_vec(full_data_paths.size());
-
-	std::cout << "Starting Comparisons ";
-	for (int id = 0; id < compare_vec.size(); id++) {
-		compare_vec[id] = compare(load_enc_int(context, full_data_paths[id]).bin_vec, to_compare.bin_vec, operation);
-		std::cout << "..";
-	} std::cout << " Done!" << std::endl;
-
-	return compare_vec;
-}
-
 void SQL_Database::select(Json::Value command) {
 
+	// Verifies validity of command
 	std::string tablename = command["table"].asString();
 	Json::Value table_json = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
 	if (table_json.empty()) {
@@ -373,10 +383,10 @@ void SQL_Database::select(Json::Value command) {
 			response["response"] = "Table does not contain column " + col.asString();
 			return;
 		}
-
 		columns[index++] = col.asString();
 	}
 
+	// Loads all necessary values besides WHERE fields values
 	std::vector<std::string> data_files(n_values);
 	std::vector<seal::Ciphertext> random_enc(n_values);
 	std::vector<std::vector<Encrypted_int>> table_enc(n_values, std::vector<Encrypted_int>(n_column));
@@ -409,6 +419,7 @@ void SQL_Database::select(Json::Value command) {
 
 		std::vector<seal::Ciphertext> compare_vec = get_compare_vec(full_data_paths, val_cond_1, condition["operation"].asInt());
 
+		// Condition 2
 		if (command["where"].isMember("condition_2")) {
 
 			condition   = command["where"]["condition_2"];
@@ -422,6 +433,7 @@ void SQL_Database::select(Json::Value command) {
 				full_data_paths[id] = DATABASE_TABLES + tablename + "\\" + column_name + "\\" + data_files[id];
 			}
 
+			// Apply junction of 2 conditions
 			std::vector<seal::Ciphertext> compare_vec2 = get_compare_vec(full_data_paths, val_cond_2, condition["operation"].asInt());
 			if (command["where"]["junction"].compare("AND") == 0) {
 				for (int id = 0; id < n_values; id++) {
@@ -436,6 +448,7 @@ void SQL_Database::select(Json::Value command) {
 			}
 		}
 
+		// Apply compare vector to values encrypted
 		for (int id = 0; id < n_values; id++) {
 			for (int col = 0; col < n_column; col++) {
 
@@ -448,6 +461,7 @@ void SQL_Database::select(Json::Value command) {
 		}
 	} 
 
+	// Pack response
 	bool select_col = command["function"].asString().compare("SELECT") == 0;
 	bool select_sum = not select_col;
 	
@@ -495,6 +509,7 @@ void SQL_Database::select(Json::Value command) {
 
 	out.close();
 
+	// Encrypt response and send it to client
 	AES_crypt(TMP_FOLDER + "response.txt", SWAP_FOLDER + "response.aes", DATABASE_SESSION + command["client"].asString() + "_session.key");
 	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }
@@ -509,15 +524,18 @@ void SQL_Database::pack_simple_response(std::string client_name) {
 	out << std::endl;
 	out.close();
 
+	// Encrypt response and send it to client
 	AES_crypt(TMP_FOLDER + "response.txt", SWAP_FOLDER + "response.aes", DATABASE_SESSION + client_name + "_session.key");
 	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }
 
 void SQL_Database::unpack_command(std::string client_name) {
 	
+	// Decrypt request
 	AES_crypt(SWAP_FOLDER + "request.aes", TMP_FOLDER + "request.txt", DATABASE_SESSION + client_name + "_session.key", true);
 	std::filesystem::remove(SWAP_FOLDER + "request.aes");
 
+	// Load command
 	std::ifstream in(TMP_FOLDER + "request.txt", std::ios::binary);
 
 	std::string aux, json_string;
@@ -535,6 +553,7 @@ void SQL_Database::unpack_command(std::string client_name) {
 	Json::Value command;
 	Json::parseFromStream(rbuilder, json_parse, &command, &err);
 
+	// Load values if needed
 	if (command.isMember("where")) {
 		if (command["where"].isMember("condition_1")) {
 			val_cond_1 = load_enc_int(context, in);
@@ -556,11 +575,12 @@ void SQL_Database::unpack_command(std::string client_name) {
 	in.close();
 	std::filesystem::remove(TMP_FOLDER + "request.txt");
 
+	// Pack appropriate response and send it to client
 	response.clear();
-	std::string function = command["function"].asString();
-
-	response["function"] = function;
 	response["valid"] = false;
+
+	std::string function = command["function"].asString();
+	response["function"] = function;
 	if (function.compare("SELECT") == 0 || function.compare("SELECT_SUM") == 0) {
 		select(command);
 	}
@@ -577,9 +597,9 @@ void SQL_Database::unpack_command(std::string client_name) {
 		select_line(command);
 	}
 	
+	// If response is simple and still not packed
 	if (not (function.compare("SELECT") == 0 || function.compare("SELECT_SUM") == 0 || function.compare("SELECT_LINE") == 0)
 		|| not response["valid"].asBool() ) {
 		pack_simple_response(client_name);
 	}
-	std::cout << "Packed response!" << std::endl;
 }

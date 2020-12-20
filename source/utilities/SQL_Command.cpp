@@ -16,8 +16,10 @@ SQL_Command::SQL_Command(std::string command) {
 void
 SQL_Command::parse(std::string command) {
 
+    // Initiliazes validity as false
     command_json["valid"] = false;
 
+    // Parse command into vector of strings
     std::string token;
     std::istringstream tokenStream(command);
     std::vector<std::string> command_vector{};
@@ -25,6 +27,8 @@ SQL_Command::parse(std::string command) {
         command_vector.push_back(token);
     }
 
+    // Execute function based on first token from command
+    // based on map defined in SQL_Command class funcMap
     to_uppercase(command_vector, 0);
     std::string function = command_vector[0];
     sql_map_t::iterator x = funcMap.find(function);
@@ -87,6 +91,7 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         return;
     }
 
+    // Check if function is SUM() or LINE
     aux_str = command_vector[1];
     to_uppercase_str(aux_str);
     if (command_vector[1].size() > 5 && aux_str.compare(0, 4, "SUM(") == 0 && aux_str.back() == ')') {
@@ -116,6 +121,7 @@ SQL_Command::select(std::vector<std::string> command_vector) {
         }
     }
 
+    // Parse conditions if they exist
     if (where_index) {
 
         Json::Value valid;
@@ -163,6 +169,7 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         return;
     }
 
+    // Search for VALUES index
     int values_index = 0;
     for (int i = 3; i < command_vector.size(); i++) {
 
@@ -175,6 +182,7 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         }
     }
 
+    // Check validity of command
     int column_size = values_index - 3;
     int values_size = command_vector.size() - values_index - 1;
     if (not values_index || column_size != values_size) {
@@ -182,6 +190,7 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         return;
     }
 
+    // Fill columns and values
     for (int i = 3, j = 0; i < values_index; i++, j++) {
 
         rem_spec_char(command_vector, i);

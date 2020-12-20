@@ -90,12 +90,14 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 	int id_width = 6;
 	int column_width = 15;
 
+	// Print Header
 	std::cout << std::endl;
 	std::cout << column_string("ID", id_width) << "|";
 	for (int col = 0; col < table_enc[0].size(); col++) {
 		std::cout << column_string(columns[col], column_width) << "|";
 	} std::cout << std::endl;
 
+	// Print Lines
 	seal::Plaintext plain;
 	for (int id = 0; id < table_enc.size(); id++) {
 
@@ -126,6 +128,7 @@ void SQL_Client::pack_command(Json::Value command) {
 	command["client"] = client_name;
 	std::ofstream out(TMP_FOLDER + "request.txt", std::ios::binary);
 
+	// Checks which values need to be encrypted
 	Json::Value value_cond_1;
 	Json::Value value_cond_2;
 
@@ -151,6 +154,7 @@ void SQL_Client::pack_command(Json::Value command) {
 	writer->write(command, &out);
 	out << std::endl;
 
+	// Saves required encrypted values
 	out << " ====== Values below: ====== " << std::endl;
 	if (value_cond_1 != Json::nullValue) {
 		save_encripted(encrypt_int(value_cond_1.asInt()), out);
@@ -169,17 +173,20 @@ void SQL_Client::pack_command(Json::Value command) {
 	} out << std::endl;
 	out.close();
 
+	// Encrypts tmp file and sends the encryption to the Database
 	AES_crypt(TMP_FOLDER + "request.txt", SWAP_FOLDER + "request.aes", session_key);
 	std::filesystem::remove(TMP_FOLDER + "request.txt");
 }
 
 void SQL_Client::unpack_response() {
 
+	// Decrypts response coming from database and loads decrypted response
 	AES_crypt(SWAP_FOLDER + "response.aes", TMP_FOLDER+ "response.txt", session_key, true);
 	std::filesystem::remove(SWAP_FOLDER + "response.aes");
 
 	std::ifstream in(TMP_FOLDER + "response.txt", std::ios::binary);
 
+	// First load Json response
 	std::string aux, json_string;
 	while (aux.compare(" ====== Values below: ====== ") != 0 && in.peek() != EOF) {
 
@@ -195,6 +202,7 @@ void SQL_Client::unpack_response() {
 	Json::Value response;
 	Json::parseFromStream(rbuilder, json_parse, &response, &err);
 
+	// Prints response if the command was not valid
 	std::cout << std::endl << response["response"].asString() << std::endl << std::endl;
 	if (not response["valid"].asBool()) { 
 		in.close();
@@ -202,6 +210,7 @@ void SQL_Client::unpack_response() {
 		return; 
 	}
 
+	// Prints the response of not select functions
 	std::string function = response["function"].asString();
 	
 	bool select_lin = function.compare("SELECT_LINE") == 0;
@@ -213,6 +222,7 @@ void SQL_Client::unpack_response() {
 		return; 
 	}
 
+	// Loads and prints table from the rest of the response
 	if (select_col || select_lin) {
 		int n_values = response["n_values"].asInt();
 		int n_column = response["n_column"].asInt();
@@ -243,6 +253,7 @@ void SQL_Client::unpack_response() {
 		}
 	}
 
+	// Loads sum value and prints if SELECT SUM()
 	if (select_sum) {
 		seal::Ciphertext sum;
 		seal::Plaintext plain;

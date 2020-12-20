@@ -9,7 +9,13 @@
 #include <string>
 #include <json/json.h>
 
-
+/// <summary>
+/// Process a command. Mimics "Internet" interaction of client sending the request
+/// and database responding.
+/// </summary>
+/// <param name="command">Issued command</param>
+/// <param name="db">Database address</param>
+/// <param name="client">Client address</param>
 void process_command(std::string command, SQL_Database &db, SQL_Client &client) {
 
 	SQL_Command function(command);
@@ -24,8 +30,8 @@ void process_command(std::string command, SQL_Database &db, SQL_Client &client) 
 
 int main() {
 
-	std::string client_name = "admin";
-	
+	// Initialize Client
+	std::string client_name;
 	while (true) {
 		std::cout << "Client name: " ;
 		std::getline(std::cin, client_name);
@@ -34,14 +40,19 @@ int main() {
 		std::cout << "No client with name <" + client_name + "> created! Contact Admin." << std::endl;
 	}
 
+	// Initialize SEAL variables (must be made outside since SEAL doesn't permit empty initializations inside classes)
 	seal::SEALContext context  = init_SEAL_Context();
 	seal::PublicKey public_key = load_SEAL_public(context, client_name);
 	seal::SecretKey secret_key = load_SEAL_secret(context, client_name);
 
+	// Initialize Database
 	SQL_Database db(context);
+
+	// Initialize Client and share session key with database
 	SQL_Client client(client_name, context, public_key, secret_key);
 	db.load_session_key(client.get_name());
 
+	// Read and process terminal commands
 	std::string command = "";
 	while (true) {
 		std::cout << ">> ";
