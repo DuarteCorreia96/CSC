@@ -49,6 +49,12 @@ Run Software
 
 It can also be externally compiled by using g++ with c++17 standard flag.
 
-admin_main.cpp needs: `Admin.h(.cpp)`, `utilities\seal_utilities_extra.h(.cpp)` and `Definitions.h`
-main.cpp       needs: `utilities\seal_utilities_extra.h(.cpp)`, `utilities\SQL_Command.h(.cpp)`, `Definitions.h`, `SQL_Client.h(.cpp)`and `SQL_Database.h(.cpp)`
+admin_main.cpp
+--------------
+`Admin.h(.cpp)`, `utilities\seal_utilities_extra.h(.cpp)` and `Definitions.h`
+
+
+main.cpp
+--------
+`utilities\seal_utilities_extra.h(.cpp)`, `utilities\SQL_Command.h(.cpp)`, `Definitions.h`, `SQL_Client.h(.cpp)`and `SQL_Database.h(.cpp)`
 
