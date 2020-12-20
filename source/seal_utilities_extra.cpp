@@ -104,3 +104,12 @@ std::string column_string(std::string data, int width) {
 
 	return std::string(" ", pad_left) + data + std::string(" ", pad_right);
 }
+
+void AES_crypt(std::string file_in, std::string file_out, std::string session_key, bool decrypt) {
+
+	std::string command = "openssl enc -aes-256-cbc -md sha512 -pbkdf2 -nosalt -in " + file_in + " -out " + file_out + " -pass file:" + session_key;
+	if (decrypt) {
+		command += " -d";
+	}
+	system(command.c_str());
+}

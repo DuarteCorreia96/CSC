@@ -1,185 +1,154 @@
 #include "admin.h"
+#include "Definitions.h"
+#include "seal_utilities_extra.h"
+
+#include <iostream>
+#include <filesystem>
+#include <seal/seal.h>
 
 
-void admistrator(int tot_clients) {
-	/*
-	std::string CA_path = ADMIN_FOLDERS + "CA\\";
+void create_folders() {
 
-	// create server's directory
-	std::filesystem::create_directory("..\\data\\server\\");
-	system("mkdir ..\\data\\server\\");
+	std::filesystem::create_directories("data\\Admin\\CA");
+	std::filesystem::create_directories("data\\Admin\\SEAL");
 
-	// generate key pair for root CA
-	system(("openssl genrsa -des3 -out " + CA_path + "CA-key.pem 2048").c_str());
+	std::filesystem::create_directories("data\\Clients");
 
-	// generate root CA certificate
-	system("openssl req -new -key ..\\data\\CA\\CA-key.pem -x509 -days 1000 -out ..\\data\\CA\\CA-cert.pem");
+	std::filesystem::create_directories("data\\Database\\certs\\clients");
+	std::filesystem::create_directories("data\\Database\\certs\\SEAL");
+	std::filesystem::create_directories("data\\Database\\tables");
 
-	// send CA root certificate to the server
-	system("copy ..\\data\\CA\\CA-cert.pem ..\\data\\server");
+	std::filesystem::create_directories("data\\swap");
+	std::filesystem::create_directories("data\\tmp");
+}
 
-	// generate key pair of the server
-	system("openssl genrsa -des3 -out ..\\data\\server\\server-key.pem 2048");
+void generate_SEAL() {
 
-	// generate server certificate request and send it to the CA
-	system("openssl req -new -config ..\\data\\CA\\openssl.cnf -key ..\\data\\server\\server-key.pem -out ..\\data\\CA\\signingReq.csr");
+	std::cout << std::endl;
+	if (std::filesystem::exists(ADMIN_SEAL + "secret"))
+		std::cout << "Overwriting secret key for ADMIN! " << std::endl;
 
-	// the certificate from our CA is used to sign the server's certificate
-	system("openssl x509 -req -days 365 -in ..\\data\\CA\\signingReq.csr -CA ..\\data\\CA\\CA-cert.pem -CAkey ..\\data\\CA\\CA-key.pem -CAcreateserial -out ..\\data\\server\\server-cert.pem");
-*/
-};
+	if (std::filesystem::exists(ADMIN_SEAL + "public"))
+		std::cout << "Overwriting public key for ADMIN! " << std::endl;
 
+	if (std::filesystem::exists(ADMIN_SEAL + "relins"))
+		std::cout << "Overwriting relin keys for ADMIN! " << std::endl;
 
-void client_signMessage(string msg, int client_nr) {
+	seal::SEALContext context = init_SEAL_Context();
+	seal::KeyGenerator keygen(context);
 
-	// create file fo store signed message
-	ofstream MyFile("..\\data\\client1\\msg.txt");
+	std::cout << std::endl << "Generating new keys ....";
+	seal::SecretKey secret_key = keygen.secret_key();
+	seal::PublicKey public_key;
+	seal::RelinKeys relin_keys;
 
-	// Write to the file
-	MyFile << msg;
+	std::cout << "....";
+	keygen.create_public_key(public_key);
+	std::cout << "....";
+	keygen.create_relin_keys(relin_keys);
+	std::cout << " Done" << std::endl;
 
-	// Close the file
-	MyFile.close();
+	std::cout << "Saving new keys ....";
+	std::ofstream secret_out(ADMIN_SEAL + "secret", std::ios::binary);
+	std::ofstream public_out(ADMIN_SEAL + "public", std::ios::binary);
+	std::ofstream relins_out(ADMIN_SEAL + "relins", std::ios::binary);
 
-	// sign the message
-	string command = "openssl dgst -sha256 -sign ..\\data\\client" + std::to_string(client_nr) + "\\client" + std::to_string(client_nr) + "-private-key.pem -out ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt";
+	secret_key.save(secret_out);
+	std::cout << "....";
+	public_key.save(public_out);
+	std::cout << "....";
+	relin_keys.save(relins_out);
+	std::cout << " Done" << std::endl << std::endl;
+
+	secret_out.close();
+	public_out.close();
+	relins_out.close();
+
+	std::cout << "Coyping relineariztion keys to Database" << std::endl << std::endl;
+	std::filesystem::copy(ADMIN_SEAL + "relins", DATABASE_CERTS + "\\SEAL\\relins", std::filesystem::copy_options::overwrite_existing);
+}
+
+void generate_OpenSSL() {
+
+	// Generate CA Private key
+	std::string command{ "openssl genrsa -out " + ADMIN_CA + "private.pem " + std::to_string(RSA_SIZE) };
 	system(command.c_str());
 
-	// convert to base64
-	string command1 = "openssl base64 -in ..\\data\\client" + std::to_string(client_nr) + "\\sign.sha256 -out ..\\data\\client" + std::to_string(client_nr) + "\\msg_signed";
-	system(command1.c_str());
-
-}
-
-
-void server_signMessage(string msg, int client_nr) {
-
-	// create file fo store signed message
-	ofstream MyFile("..\\data\\server\\client" + std::to_string(client_nr) + "\\msg.txt");
-
-	// Write to the file
-	MyFile << msg;
-
-	// Close the file
-	MyFile.close();
-
-	// sign the message
-	string command = "openssl dgst -sha256 -sign ..\\data\\server\\server-key.pem -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\sign.sha256 ..\\data\\server\\client" + std::to_string(client_nr) + "\\msg.txt";
+	// Generate CA public key
+	command = "openssl req -new -key " + ADMIN_CA + "private.pem -x509 -days 1000 -out " + ADMIN_CA + CA_CERTIFICATE;
+	command += " -subj \"/C=PT/ST=Lisbon/L=Lisbon/O=Global Security/OU=IT/CN=ist.pt\" ";
 	system(command.c_str());
 
-	// convert to base64
-	string command1 = "openssl base64 -in ..\\data\\server\\client" + std::to_string(client_nr) + "\\sign.sha256 -out ..\\data\\server\\client" + std::to_string(client_nr) + "\\msg_signed";
-	system(command1.c_str());
-
+	generate_Clients(DATABASE_CERTS, "database-cert.crt", "Database", true);
 }
 
+int verify_cert(std::string certs_folder, std::string cert_name) {
 
-void server_verifySignature(string original_msg, int client_nr) {
-
-	// open file
-	ofstream MyFile("..\\data\\client1\\original_msg.txt");
-
-	// Write to the file
-	MyFile << original_msg;
-
-	// Close the file
-	MyFile.close();
-
-	system("openssl base64 -d -in ..\\data\\client1\\msg_signed -out ..\\data\\client1\\sign.sha256");
-	string command = "openssl dgst -sha256 -verify ..\\data\\server\\clients\\client1\\client" + std::to_string(client_nr) + "-public-key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\original_msg.txt";
+	std::string verify_file = "data\\tmp\\verify.txt";
+	std::string command = "openssl verify -CAfile " + certs_folder + CA_CERTIFICATE + " " + certs_folder + cert_name + " > " + verify_file;
 	system(command.c_str());
 
+	std::string test;
+	std::ifstream in(verify_file);
+	std::getline(in, test);
+	in.close();
+	std::filesystem::remove(verify_file);
+
+	if (test.compare(certs_folder + cert_name + ": OK") != 0) {
+		return -1;
+	}
+
+	return 0;
 }
 
-void client_verifySignature(string original_msg) {
+void generate_Clients(std::string certs_folder, std::string cert_name, std::string client_name, bool database) {
 
-	// open file
-	ofstream MyFile("..\\data\\client1\\msg_to_sign2.txt");
+	if (not std::filesystem::exists(certs_folder)) {
+		std::filesystem::create_directories(certs_folder);
+	}
 
-	// Write to the file
-	MyFile << original_msg;
+	// Copy CA Certificate to Database/Client
+	std::filesystem::copy_file(ADMIN_CA + CA_CERTIFICATE, certs_folder + CA_CERTIFICATE, std::filesystem::copy_options::overwrite_existing);
 
-	// Close the file
-	MyFile.close();
-
-	system("openssl base64 -d -in ..\\data\\client1\\msg_signed -out ..\\data\\client1\\sign.sha256");
-	system("openssl dgst -sha256 -verify ..\\data\\client1\\public1key.pem -signature ..\\data\\client1\\sign.sha256 ..\\data\\client1\\msg_to_sign2.txt");
-
-}
-
-
-void client_encrypt(string plaintext, int client_nr) {
-
-	// put the string in a file
-	ofstream MyFile("..\\data\\client" + std::to_string(client_nr) + "\\msg.txt");
-	// Write to the file
-	MyFile << plaintext;
-	// Close the file
-	MyFile.close();
-
-	// ecrypt
-
-	string command = "openssl rsautl -encrypt -pubin -inkey ..\\data\\client" + std::to_string(client_nr) + "\\server-public-key.pem -in ..\\data\\client" + std::to_string(client_nr) + "\\msg.txt -out ..\\data\\server\\clients\\client" + std::to_string(client_nr) + "\\encrypted-msg.txt";
+	// Generate database/clients private key
+	std::string command = "openssl genrsa -out " + certs_folder + "private.pem " + std::to_string(RSA_SIZE);
 	system(command.c_str());
-}
 
-string server_decrypt() {
-
-	// decrypt
-	system("openssl rsautl -decrypt -inkey ..\\data\\server\\server-key.pem -in ..\\data\\server\\clients\\client1\\encrypted-msg.txt -out ..\\data\\server\\clients\\client1\\plaintext.txt");
-
-	// put the content of the file in a string
-	ifstream t("..\\data\\server\\encrypted.txt"); //taking file as inputstream
-	string str;
-	//if (t) {
-	//	ostringstream ss;
-	//	ss << t.rdbuf(); // reading data
-	//	str = ss.str();
-	//}
-
-	return str;
-}
-
-
-int new_client(int n_client) {
-
-	n_client++;
-
-	// create directories
-	string command = "mkdir ..\\data\\server\\clients\\client" + std::to_string(n_client);
+	// Create certificate to be signed and send it to CA
+	command = "openssl req -new -key " + certs_folder + "private.pem" + " -out " + ADMIN_CA + "signingReq.csr";
+	command += " -subj \"/C=PT/ST=Lisbon/L=Lisbon/O=Global Security/OU=IT/CN=" + client_name + "\" ";
 	system(command.c_str());
-	string command1 = "mkdir ..\\data\\client" + std::to_string(n_client);
-	system(command1.c_str());
 
-	// send CA root certificate to a client
-	string command2 = "copy ..\\data\\CA\\CA-cert.pem ..\\data\\client" + std::to_string(n_client);
-	cout << "---->" << (command2) << endl;
-	system(command2.c_str());
+	// Sign certificate and send it to database/client
+	command = "openssl x509 -req -days 365 -in " + ADMIN_CA + "signingReq.csr -CA " + ADMIN_CA + CA_CERTIFICATE + " -CAkey " + ADMIN_CA + "private.pem -CAcreateserial -out " + certs_folder + cert_name;
+	system(command.c_str());
 
-	// generate key pair of a client
-	string command3 = "openssl genrsa -des3 -out ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-private-key.pem 2048";
-	cout << "---->" << (command3) << endl;
-	system(command3.c_str());
+	// Verify certificate
+	if (verify_cert(certs_folder, cert_name) != 0) {
+		std::cout << "Certificate not correct!" << std::endl;
+		exit(-1);
+	}
 
-	// get public key of a client
-	string command4 = "openssl rsa -in ..\\data\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-private-key.pem -pubout > ..\\data\\server\\clients\\client" + std::to_string(n_client) + "\\client" + std::to_string(n_client) + "-public-key.pem";
-	cout << "---->" << command4 << endl;
-	system(command4.c_str());
+	// Generate Client public key
+	command = "openssl x509 -pubkey -in " + certs_folder + cert_name + " -out " + certs_folder + "public.pem";
+	system(command.c_str());
 
-	// send server's certificate to a client
-	string command5 = "copy ..\\data\\server\\server-cert.pem ..\\data\\client" + std::to_string(n_client);
-	cout << "---->" << (command5) << endl;
-	system(command5.c_str());
+	if (not database) {
+		std::filesystem::create_directory(DATABASE_CERTS + "Clients\\" + client_name);
+		std::filesystem::copy(certs_folder + "\\public.pem", DATABASE_CERTS + "Clients\\" + client_name + "\\public.pem", std::filesystem::copy_options::overwrite_existing);
 
-	// verify server's certificate
-	string command6 = "openssl verify -verbose -CAfile ..\\data\\client" + std::to_string(n_client) + "\\CA-cert.pem  ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem";
-	cout << "---->" << (command6) << endl;
-	system(command6.c_str());
+		// SEAL Keys
+		std::filesystem::create_directory(CLIENT_FOLDERS + client_name + "\\SEAL");
+		std::filesystem::copy(ADMIN_SEAL + "public", CLIENT_FOLDERS + client_name + "\\SEAL\\public", std::filesystem::copy_options::overwrite_existing);
+		std::filesystem::copy(ADMIN_SEAL + "secret", CLIENT_FOLDERS + client_name + "\\SEAL\\secret", std::filesystem::copy_options::overwrite_existing);
+	}
+	else {
+		std::filesystem::create_directory(CLIENT_FOLDERS + "database");
+		std::filesystem::copy(certs_folder + "\\public.pem", CLIENT_FOLDERS + "database\\public.pem", std::filesystem::copy_options::overwrite_existing);
+	}
 
-	// obtain the public key of the server
-	string command7 = "openssl x509 -pubkey -noout -in ..\\data\\client" + std::to_string(n_client) + "\\server-cert.pem  > ..\\data\\client" + std::to_string(n_client) + "\\server-public-key.pem";
-	cout << "---->" << (command7) << endl;
-	system(command7.c_str());
-
-	return n_client;
+	// Remove extra files
+	std::filesystem::remove(ADMIN_CA + "CA-cert.srl");
+	std::filesystem::remove(ADMIN_CA + "signingReq.csr");
+	std::cout << "Finished creating client: " + client_name << std::endl;
 }

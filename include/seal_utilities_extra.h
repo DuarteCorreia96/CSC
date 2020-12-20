@@ -35,3 +35,6 @@ seal::Ciphertext load_single_enc(seal::SEALContext context, std::string filepath
 seal::Ciphertext load_single_enc(seal::SEALContext context, std::ifstream& in);
 
 std::string column_string(std::string data, int width);
+
+
+void AES_crypt(std::string file_in, std::string file_out, std::string session_key, bool decrypt = false);

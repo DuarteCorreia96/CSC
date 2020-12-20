@@ -21,12 +21,18 @@
     <ClCompile Include="source\seal_utilities_extra.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\Admin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Definitions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\seal_utilities_extra.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\admin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

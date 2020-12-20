@@ -5,6 +5,24 @@
 #include <string>
 #include <sstream>
 
+void SQL_Client::generate_session_key() {
+
+	// Geenrate session key
+	std::string command = "openssl rand -base64 128 > " + session_key;
+	system(command.c_str());
+
+	// Sign key with private key
+	command = "openssl rsautl -sign -inkey " + private_key + " -in " + session_key + " -out " + session_key + "_signed";
+	system(command.c_str());
+
+	// Share key with database
+	command = "openssl rsautl -raw -encrypt -pubin -inkey " + database_key + " -in " + session_key + "_signed" + " -out " + SWAP_FOLDER + client_name + "_session.enc";
+	system(command.c_str());
+
+	// Clean unecessary files
+	std::filesystem::remove(CLIENT_FOLDERS + client_name + "\\session.key_signed");
+}
+
 seal::Ciphertext SQL_Client::get_random_enc() {
 
 	std::mt19937 rng(rd());
@@ -67,7 +85,7 @@ Decrypted_int SQL_Client::decrypt_int(Encrypted_int x_enc) {
 }
 
 void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_enc, 
-	std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc) {
+	std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc, int linenum) {
 
 	int id_width = 6;
 	int column_width = 15;
@@ -86,7 +104,12 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 			continue;
 		}
 
-		std::cout << column_string(std::to_string(id + 1), id_width) << "|";
+		if (linenum == 0) {
+			std::cout << column_string(std::to_string(id + 1), id_width) << "|";
+		}
+		else {
+			std::cout << column_string(std::to_string(linenum), id_width) << "|";
+		}
 		for (int col = 0; col < table_enc[0].size(); col++) {
 
 			decryptor.decrypt(table_enc[id][col], plain);
@@ -95,11 +118,13 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 		} std::cout << std::endl;
 	}
 	std::cout << std::endl;
+
 }
 
 void SQL_Client::pack_command(Json::Value command) {
 
-	std::ofstream out(SWAP_FOLDER + "request.txt", std::ios::binary);
+	command["client"] = client_name;
+	std::ofstream out(TMP_FOLDER + "request.txt", std::ios::binary);
 
 	Json::Value value_cond_1;
 	Json::Value value_cond_2;
@@ -118,7 +143,7 @@ void SQL_Client::pack_command(Json::Value command) {
 	if (command.isMember("values")) {
 
 		values = command["values"];
-		command["values"]   = values.size();
+		command["values"] = values.size();
 	}
 
 	Json::StreamWriterBuilder builder;
@@ -132,7 +157,7 @@ void SQL_Client::pack_command(Json::Value command) {
 	}
 
 	if (value_cond_2 != Json::nullValue) {
-		save_encripted(encrypt_int(value_cond_1.asInt()), out);
+		save_encripted(encrypt_int(value_cond_2.asInt()), out);
 	}
 
 	if (values != Json::nullValue) {
@@ -143,11 +168,17 @@ void SQL_Client::pack_command(Json::Value command) {
 		}
 	} out << std::endl;
 	out.close();
+
+	AES_crypt(TMP_FOLDER + "request.txt", SWAP_FOLDER + "request.aes", session_key);
+	std::filesystem::remove(TMP_FOLDER + "request.txt");
 }
 
 void SQL_Client::unpack_response() {
 
-	std::ifstream in(SWAP_FOLDER + "response.txt", std::ios::binary);
+	AES_crypt(SWAP_FOLDER + "response.aes", TMP_FOLDER+ "response.txt", session_key, true);
+	std::filesystem::remove(SWAP_FOLDER + "response.aes");
+
+	std::ifstream in(TMP_FOLDER + "response.txt", std::ios::binary);
 
 	std::string aux, json_string;
 	while (aux.compare(" ====== Values below: ====== ") != 0 && in.peek() != EOF) {
@@ -164,16 +195,25 @@ void SQL_Client::unpack_response() {
 	Json::Value response;
 	Json::parseFromStream(rbuilder, json_parse, &response, &err);
 
-	std::cout << response["response"].asString() << std::endl;
-	if (not response["valid"].asBool()) { in.close(); return; }
+	std::cout << std::endl << response["response"].asString() << std::endl << std::endl;
+	if (not response["valid"].asBool()) { 
+		in.close();
+		std::filesystem::remove(TMP_FOLDER + "response.txt");
+		return; 
+	}
 
 	std::string function = response["function"].asString();
-
+	
+	bool select_lin = function.compare("SELECT_LINE") == 0;
 	bool select_col = function.compare("SELECT") == 0;
 	bool select_sum = function.compare("SELECT_SUM") == 0;
-	if (not (select_col || select_sum)) { in.close(); return; }
+	if (not (select_col || select_sum || select_lin)) { 
+		in.close(); 
+		std::filesystem::remove(TMP_FOLDER + "response.txt");
+		return; 
+	}
 
-	if (select_col) {
+	if (select_col || select_lin) {
 		int n_values = response["n_values"].asInt();
 		int n_column = response["n_column"].asInt();
 
@@ -194,8 +234,13 @@ void SQL_Client::unpack_response() {
 				table_enc[id][col].load(context, in);
 			} 
 		}
-
-		print_table(table_enc, columns, random_enc);
+		
+		if (select_col) {
+			print_table(table_enc, columns, random_enc);
+		}
+		else {
+			print_table(table_enc, columns, random_enc, response["linenum"].asInt());
+		}
 	}
 
 	if (select_sum) {
@@ -209,4 +254,5 @@ void SQL_Client::unpack_response() {
 	}
 
 	in.close();
+	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }

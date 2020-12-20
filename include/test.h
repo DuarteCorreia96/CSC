@@ -122,7 +122,7 @@ void test_func() {
 	std::vector<seal::Ciphertext> x_vec_enc = client.encrypt_int(x).bin_vec;
 	std::vector<seal::Ciphertext> y_vec_enc = client.encrypt_int(y).bin_vec;
 
-	SQL_Database database(context, secret_key);
+	SQL_Database database(context);
 
 	seal::Ciphertext op_encry;
 	seal::Plaintext  op_plain;

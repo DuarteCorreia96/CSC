@@ -142,10 +142,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\Admin.cpp" />
     <ClCompile Include="source\admin_main.cpp" />
     <ClCompile Include="source\seal_utilities_extra.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\admin.h" />
     <ClInclude Include="include\Definitions.h" />
     <ClInclude Include="include\seal_utilities_extra.h" />
   </ItemGroup>

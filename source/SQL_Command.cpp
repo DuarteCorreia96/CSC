@@ -71,6 +71,7 @@ SQL_Command::select(std::vector<std::string> command_vector) {
     for (unsigned __int64 i = 0; i < command_vector.size(); i++) {
 
         aux_str = command_vector[i];
+        to_uppercase_str(aux_str);
         if (aux_str.compare("FROM") == 0) {
             from_index = i;
         }
@@ -156,16 +157,14 @@ void
 SQL_Command::insert_table(std::vector<std::string> command_vector) {
 
     to_uppercase(command_vector, 1);
-    to_uppercase(command_vector, 2);
-    if (command_vector[1].compare("INTO") != 0 || command_vector[2].compare("TABLE") != 0 
-        || command_vector.size() < 7 || command_vector.size() % 2 != 1) {
+    if (command_vector[1].compare("INTO") != 0 != 0 
+        || command_vector.size() < 6 || command_vector.size() % 2 != 0) {
         std::cout << "Function not valid!" << std::endl;
         return;
     }
 
-
     int values_index = 0;
-    for (int i = 4; i < command_vector.size(); i++) {
+    for (int i = 3; i < command_vector.size(); i++) {
 
         std::string aux_str = command_vector[i];
         to_uppercase_str(aux_str);
@@ -176,14 +175,14 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
         }
     }
 
-    int column_size = values_index - 4;
+    int column_size = values_index - 3;
     int values_size = command_vector.size() - values_index - 1;
     if (not values_index || column_size != values_size) {
         std::cout << "Missing Values! Function not valid!" << std::endl;
         return;
     }
 
-    for (int i = 4, j = 0; i < values_index; i++, j++) {
+    for (int i = 3, j = 0; i < values_index; i++, j++) {
 
         rem_spec_char(command_vector, i);
         command_json["columns"][j] = command_vector[i];
@@ -199,7 +198,7 @@ SQL_Command::insert_table(std::vector<std::string> command_vector) {
     }
 
     command_json["function"] = "INSERT";
-    command_json["table"] = command_vector[3];
+    command_json["table"] = command_vector[2];
     command_json["valid"] = true;
 }
 
@@ -273,10 +272,6 @@ SQL_Command::parse_conditions(std::vector<std::string> command_vector, unsigned 
         }
         catch (std::exception e) { return conditions; }
 
-    }
-    else {
-        conditions["condition_2"] = Json::nullValue;
-        conditions["junction"]    = Json::nullValue;
     }
 
     conditions["valid"] = true;

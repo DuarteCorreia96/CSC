@@ -6,6 +6,36 @@
 #include <json/json.h>
 #include <fstream>
 
+void SQL_Database::load_session_key(std::string client_name) {
+
+	// Decrypt session key using private key
+	std::string command = "openssl rsautl -raw -decrypt -inkey " + DATABASE_CERTS + "private.pem" + " -in " + SWAP_FOLDER + client_name + "_session.enc" + " -out " + DATABASE_CERTS + "tmp_session.to_dec";
+	system(command.c_str());
+
+	// Verify and save session key using client's public key
+	command = "openssl rsautl -verify -pubin -inkey " + DATABASE_CERTS + "Clients\\" + client_name + "\\public.pem ";
+	command += "-in " + DATABASE_CERTS + "tmp_session.to_dec -out " + DATABASE_SESSION + client_name + "_session.key";
+	command += " > " + TMP_FOLDER + "output.txt";
+	system(command.c_str());
+
+	// Get string to check verification (must be empty if all ok)
+	std::ifstream in(TMP_FOLDER + "output.txt");
+	std::string test;
+	std::getline(in, test);
+	in.close();
+
+	// Remove extra files
+	std::filesystem::remove(SWAP_FOLDER + client_name + "_session.enc");
+	std::filesystem::remove(DATABASE_CERTS + "tmp_session.to_dec");
+	std::filesystem::remove(TMP_FOLDER + "output.txt");
+
+	// Check if verify was good and exits if not
+	if (test.size() != 0) {
+		std::cout << "Client is not certified!" << std::endl;
+		exit(-1);
+	}
+}
+
 void SQL_Database::not_inplace(seal::Ciphertext &encrypted) {
 
 	evaluator.negate_inplace(encrypted);
@@ -91,10 +121,6 @@ seal::Ciphertext SQL_Database::compare(std::vector<seal::Ciphertext> x, std::vec
 	evaluator.multiply(not_great, not_lesst, equal);
 	evaluator.relinearize_inplace(equal, relin_keys);
 
-	if (PRINT_BUGET) {
-		cout << "    + Noise Budget in equal: " << decryptor.invariant_noise_budget(equal) << " bits" << endl;
-	}
-
 	if (     operation == '>') { return great; }
 	else if (operation == '<') { return lesst; }
 	else if (operation == '=') { return equal; }
@@ -118,7 +144,6 @@ Json::Value SQL_Database::load_table(std::string path) {
 	Json::Value table;
 	if (not std::filesystem::exists(path)) {
 		response["response"] = "Table does not exist!";
-		response["valid"] = false;
 		return table;
 	}
 
@@ -138,13 +163,11 @@ void SQL_Database::create_table(Json::Value command) {
 
 	if (std::filesystem::exists(DATABASE_TABLES + tablename)) {
 		response["response"] = "Table already exists!";
-		response["valid"] = false;
 		return;
 	}
 
 	if (columns.size() == 0) {
 		response["response"] = "Column size should be atleast 1!";
-		response["valid"] = false;
 		return;
 	}
 
@@ -171,7 +194,7 @@ void SQL_Database::insert_values(Json::Value command) {
 
 	std::string tablename = command["table"].asString();
 	std::vector<std::string> columns(command["columns"].size());
-	for (int col = 0; col < command["columns"].size(); col++) {
+	for (int col = 0; col < (int) command["columns"].size(); col++) {
 		columns[col] = command["columns"][col].asString();
 	}
 
@@ -195,7 +218,6 @@ void SQL_Database::insert_values(Json::Value command) {
 		not (columns.size() == columns_insert.size()) &&	// If input vector is not a set
 		not (columns.size() == values.size()) ) {			// If no values missing
 		response["response"] = "Columns not correct!";
-		response["valid"] = false;
 		return;
 	}
 
@@ -235,7 +257,6 @@ void SQL_Database::delete_line(Json::Value command) {
 
 	if (table["n_values"] < linenum) {
 		response["response"] = "Line number too high!";
-		response["valid"] = false;
 		return;
 	}
 
@@ -256,6 +277,64 @@ void SQL_Database::delete_line(Json::Value command) {
 	response["valid"] = true;
 }
 
+
+void SQL_Database::select_line(Json::Value command) {
+
+	std::string tablename = command["table"].asString();
+	int linenum = command["linenum"].asInt();
+
+	Json::Value table = load_table(DATABASE_TABLES + tablename + "\\" + "config.json");
+	if (table.empty()) {
+		return;
+	}
+
+	if (table["n_values"] < linenum) {
+		response["response"] = "Line number too high!";
+		return;
+	}
+
+	std::string filename = std::to_string(table["files"][linenum - 1].asInt()) + ".data";
+
+	seal::Ciphertext random;
+	std::ifstream random_in(DATABASE_TABLES + tablename + "\\__RANDOM__\\" + filename, std::ios::binary);
+	random.load(context, random_in);
+	random_in.close();
+
+
+	int n_columns = table["n_cols"].asInt();
+	std::vector<seal::Ciphertext> vector_enc(n_columns);
+	for (int col = 0; col < n_columns; col++) {
+
+		std::string filepath = DATABASE_TABLES + tablename + "\\" + table["columns"][col].asString() + "\\" + filename;
+		std::ifstream in(filepath, std::ios::binary);
+		vector_enc[col].load(context, in);
+		in.close();
+	}
+
+	response["linenum"]  = linenum;
+	response["n_column"] = n_columns;
+	response["n_values"] = 1;
+	response["columns"]  = table["columns"];
+	response["valid"]    = true;
+
+	Json::StreamWriterBuilder builder;
+	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+
+	std::ofstream out(TMP_FOLDER + "response.txt", std::ios::binary);
+	writer->write(response, &out);
+	out << std::endl;
+
+	out << " ====== Values below: ====== " << std::endl;
+	random.save(out);
+	for (int col = 0; col < n_columns; col++) {
+		vector_enc[col].save(out);
+
+	} out << std::endl;
+	out.close();
+
+	AES_crypt(TMP_FOLDER + "response.txt", SWAP_FOLDER + "response.aes", DATABASE_SESSION + command["client"].asString() + "_session.key");
+	std::filesystem::remove(TMP_FOLDER + "response.txt");
+}
 
 std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::string> full_data_paths, Encrypted_int to_compare, char operation) {
 
@@ -293,7 +372,6 @@ void SQL_Database::select(Json::Value command) {
 
 		if (not (columns_set.find(col.asString()) != columns_set.end())) {
 			response["response"] = "Table does not contain column " + col.asString();
-			response["valid"] = false;
 			return;
 		}
 
@@ -315,14 +393,13 @@ void SQL_Database::select(Json::Value command) {
 	}
 
 	// Comparing function
-	if (command["where"]["condition_1"] != Json::nullValue) {
+	if (command["where"].isMember("condition_1")) {
 
 		Json::Value condition = command["where"]["condition_1"];
 
 		std::string column_name = condition["variable"].asString();
 		if (not (columns_set.find(column_name) != columns_set.end())) {
 			response["response"] = "Table does not contain column " + column_name;
-			response["valid"] = false;
 			return;
 		}
 
@@ -333,13 +410,12 @@ void SQL_Database::select(Json::Value command) {
 
 		std::vector<seal::Ciphertext> compare_vec = get_compare_vec(full_data_paths, val_cond_1, condition["operation"].asInt());
 
-		if (command["where"]["condition_2"] != Json::nullValue) {
+		if (command["where"].isMember("condition_2")) {
 
 			condition   = command["where"]["condition_2"];
 			column_name = condition["variable"].asString();
 			if (not (columns_set.find(column_name) != columns_set.end())) {
 				response["response"] = "Table does not contain column " + column_name;
-				response["valid"] = false;
 				return;
 			}
 
@@ -396,7 +472,7 @@ void SQL_Database::select(Json::Value command) {
 	Json::StreamWriterBuilder builder;
 	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
 	
-	std::ofstream out(SWAP_FOLDER + "response.txt", std::ios::binary);
+	std::ofstream out(TMP_FOLDER + "response.txt", std::ios::binary);
 	writer->write(response, &out);
 	out << std::endl;
 
@@ -419,22 +495,31 @@ void SQL_Database::select(Json::Value command) {
 	}
 
 	out.close();
+
+	AES_crypt(TMP_FOLDER + "response.txt", SWAP_FOLDER + "response.aes", DATABASE_SESSION + command["client"].asString() + "_session.key");
+	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }
 
-void SQL_Database::pack_simple_response() {
+void SQL_Database::pack_simple_response(std::string client_name) {
 
 	Json::StreamWriterBuilder builder;
 	std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
 
-	std::ofstream out(SWAP_FOLDER + "response.txt", std::ios::binary);
+	std::ofstream out(TMP_FOLDER + "response.txt", std::ios::binary);
 	writer->write(response, &out);
 	out << std::endl;
 	out.close();
+
+	AES_crypt(TMP_FOLDER + "response.txt", SWAP_FOLDER + "response.aes", DATABASE_SESSION + client_name + "_session.key");
+	std::filesystem::remove(TMP_FOLDER + "response.txt");
 }
 
-void SQL_Database::unpack_command() {
+void SQL_Database::unpack_command(std::string client_name) {
+	
+	AES_crypt(SWAP_FOLDER + "request.aes", TMP_FOLDER + "request.txt", DATABASE_SESSION + client_name + "_session.key", true);
+	std::filesystem::remove(SWAP_FOLDER + "request.aes");
 
-	std::ifstream in(SWAP_FOLDER + "request.txt", std::ios::binary);
+	std::ifstream in(TMP_FOLDER + "request.txt", std::ios::binary);
 
 	std::string aux, json_string;
 	while (aux.compare(" ====== Values below: ====== ") != 0 && in.peek() != EOF) {
@@ -470,11 +555,13 @@ void SQL_Database::unpack_command() {
 		}
 	}
 	in.close();
+	std::filesystem::remove(TMP_FOLDER + "request.txt");
 
 	response.clear();
 	std::string function = command["function"].asString();
 
 	response["function"] = function;
+	response["valid"] = false;
 	if (function.compare("SELECT") == 0 || function.compare("SELECT_SUM") == 0) {
 		select(command);
 	}
@@ -487,9 +574,13 @@ void SQL_Database::unpack_command() {
 	else if (function.compare("DELETE") == 0) {
 		delete_line(command);
 	}
+	else if (function.compare("SELECT_LINE") == 0) {
+		select_line(command);
+	}
 	
-	if (not (function.compare("SELECT") == 0 || function.compare("SELECT_SUM") == 0)) {
-		pack_simple_response();
+	if (not (function.compare("SELECT") == 0 || function.compare("SELECT_SUM") == 0 || function.compare("SELECT_LINE") == 0)
+		|| not response["valid"].asBool() ) {
+		pack_simple_response(client_name);
 	}
 	std::cout << "Packed response!" << std::endl;
 }

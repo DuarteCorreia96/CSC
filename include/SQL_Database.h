@@ -32,14 +32,11 @@ private:
 
 	Json::Value response;
 
-	// JUST FOR TESTING PURPOSES
-	seal::Decryptor decryptor;
-
 public:
 
-	SQL_Database(seal::SEALContext context, seal::SecretKey secret) 
-		: context(context), evaluator(context), decryptor(context, secret) {
+	SQL_Database(seal::SEALContext context) : context(context), evaluator(context) {
 
+		std::filesystem::create_directory(DATABASE_SESSION);
 		if (std::filesystem::exists(DATABASE_CERTS + "SEAL\\relins")) {
 
 			std::ifstream in(DATABASE_CERTS + "SEAL\\relins", std::ios::binary);
@@ -53,6 +50,9 @@ public:
 		}
 	};
 
+	~SQL_Database() {
+		std::filesystem::remove_all(DATABASE_SESSION);
+	}
 
 	seal::Ciphertext compare(std::vector<seal::Ciphertext> x, std::vector<seal::Ciphertext> y, char operation);
 
@@ -60,6 +60,7 @@ public:
 	void insert_values(Json::Value command);
 	void create_table(Json::Value command);
 	void delete_line(Json::Value command);
+	void select_line(Json::Value command);
 	
 	void select(Json::Value command);
 
@@ -67,6 +68,8 @@ public:
 
 	std::vector<seal::Ciphertext>  get_compare_vec(std::vector<std::string> full_data_paths, Encrypted_int to_compare, char operation);
 
-	void unpack_command();
-	void pack_simple_response();
+	void unpack_command(std::string client_name);
+	void pack_simple_response(std::string client_name);
+
+	void load_session_key(std::string client_name);
 };
