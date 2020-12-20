@@ -71,6 +71,8 @@ private:
 	std::vector<Encrypted_int> values;
 	seal::Ciphertext random;
 
+	__int64 ack_number = 0;
+
 	// Response of the Database to a request
 	Json::Value response;
 	

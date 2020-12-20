@@ -28,34 +28,7 @@ private:
 
 	std::random_device rd;
 
-public:
-
-	/// <summary>
-	/// Initiliaztion of a client with SEALContext, PublicKey and SecretKey. 
-	/// It initializes client SEAL evaluator, ddecryptor and encryptor, and saves a copy of context.
-	/// It alsso initializes paths needed for RSA and AES. Generates a random session key and sends it to the database encrypted with RSA.
-	/// </summary>
-	/// <param name="client_n">Name of the client</param>
-	/// <param name="context">seal::SEALContext</param>
-	/// <param name="public_k">seal::PublicKey of the client</param>
-	/// <param name="secret_k">seal::SecretKey of the client</param>
-	SQL_Client(std::string client_n, seal::SEALContext context, seal::PublicKey public_k, seal::SecretKey secret_k) : 
-		evaluator(context), decryptor(context, secret_k), encryptor(context, public_k), context(context) {
-
-		client_name = client_n;
-
-		session_key  = CLIENT_FOLDERS + client_name + "\\session.key";
-		private_key  = CLIENT_FOLDERS + client_name + "\\certs\\private.pem";
-		public_key   = CLIENT_FOLDERS + client_name + "\\certs\\public.pem";
-		database_key = CLIENT_FOLDERS + "database\\public.pem";
-
-		generate_session_key();
-	};
-
-	// Cleans session key
-	~SQL_Client() {
-		std::filesystem::remove(CLIENT_FOLDERS + client_name + "\\session.key");
-	}
+	__int64 session_ack;
 
 	/// Generates a random session key using Openssl rand, signs it private key, encrypts with database public key.
 	/// Sends to the database the encrypted version and saves the decrypted version.
@@ -89,6 +62,39 @@ public:
 	/// <param name="random_enc">Vector of the random values which are used to print lines (if 0 not print)</param>
 	/// <param name="linenum">if SELECT LINE send id of the line to print</param>
 	void print_table(std::vector<std::vector<seal::Ciphertext>> table_enc, std::vector<std::string> columns, std::vector<seal::Ciphertext> random_enc, int linenum = 0);
+
+public:
+
+	/// <summary>
+	/// Initiliaztion of a client with SEALContext, PublicKey and SecretKey. 
+	/// It initializes client SEAL evaluator, ddecryptor and encryptor, and saves a copy of context.
+	/// It alsso initializes paths needed for RSA and AES. Generates a random session key and sends it to the database encrypted with RSA.
+	/// </summary>
+	/// <param name="client_n">Name of the client</param>
+	/// <param name="context">seal::SEALContext</param>
+	/// <param name="public_k">seal::PublicKey of the client</param>
+	/// <param name="secret_k">seal::SecretKey of the client</param>
+	SQL_Client(std::string client_n, seal::SEALContext context, seal::PublicKey public_k, seal::SecretKey secret_k) : 
+		evaluator(context), decryptor(context, secret_k), encryptor(context, public_k), context(context) {
+
+		client_name = client_n;
+
+		session_key  = CLIENT_FOLDERS + client_name + "\\session.key";
+		private_key  = CLIENT_FOLDERS + client_name + "\\certs\\private.pem";
+		public_key   = CLIENT_FOLDERS + client_name + "\\certs\\public.pem";
+		database_key = CLIENT_FOLDERS + "database\\public.pem";
+
+		generate_session_key();
+
+		std::mt19937 rng(rd());
+		std::uniform_int_distribution<int> uni(1, 2 << 16);
+		session_ack = uni(rng);
+	};
+
+	// Cleans session key
+	~SQL_Client() {
+		std::filesystem::remove(CLIENT_FOLDERS + client_name + "\\session.key");
+	}
 
 	/// <summary>
 	/// Pack command to send to the Database. And sends the encrypted request to the database.

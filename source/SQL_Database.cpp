@@ -553,6 +553,19 @@ void SQL_Database::unpack_command(std::string client_name) {
 	Json::Value command;
 	Json::parseFromStream(rbuilder, json_parse, &command, &err);
 
+	if (ack_number == 0) {
+		ack_number = command["ack"].asInt64();
+	}
+	else {
+		if (ack_number != command["ack"].asInt64()) {
+			response.clear();
+			response["valid"] = false;
+			response["response"] = "Wrong ack number not processing request!";
+			pack_simple_response(client_name);
+			return;
+		}
+	}
+
 	// Load values if needed
 	if (command.isMember("where")) {
 		if (command["where"].isMember("condition_1")) {
@@ -578,6 +591,9 @@ void SQL_Database::unpack_command(std::string client_name) {
 	// Pack appropriate response and send it to client
 	response.clear();
 	response["valid"] = false;
+
+	ack_number++;
+	response["ack"] = ack_number;
 
 	std::string function = command["function"].asString();
 	response["function"] = function;

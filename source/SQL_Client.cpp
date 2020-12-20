@@ -126,6 +126,8 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 void SQL_Client::pack_command(Json::Value command) {
 
 	command["client"] = client_name;
+	command["ack"]    = session_ack;
+	session_ack++;
 	std::ofstream out(TMP_FOLDER + "request.txt", std::ios::binary);
 
 	// Checks which values need to be encrypted
@@ -201,6 +203,11 @@ void SQL_Client::unpack_response() {
 
 	Json::Value response;
 	Json::parseFromStream(rbuilder, json_parse, &response, &err);
+
+	if (session_ack != response["ack"].asInt64()) {
+		std::cout << "Wrong ack number not processing response!" << std::endl;
+		return;
+	}
 
 	// Prints response if the command was not valid
 	std::cout << std::endl << response["response"].asString() << std::endl << std::endl;
