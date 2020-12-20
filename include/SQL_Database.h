@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Definitions.h"
-#include "seal_utilities_extra.h"
+#include "utilities/seal_utilities_extra.h"
 
 #include <seal/seal.h>
 #include <vector>

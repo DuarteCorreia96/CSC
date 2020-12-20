@@ -144,12 +144,12 @@
   <ItemGroup>
     <ClCompile Include="source\Admin.cpp" />
     <ClCompile Include="source\admin_main.cpp" />
-    <ClCompile Include="source\seal_utilities_extra.cpp" />
+    <ClCompile Include="source\utilities\seal_utilities_extra.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\admin.h" />
+    <ClInclude Include="include\Admin.h" />
     <ClInclude Include="include\Definitions.h" />
-    <ClInclude Include="include\seal_utilities_extra.h" />
+    <ClInclude Include="include\utilities\seal_utilities_extra.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

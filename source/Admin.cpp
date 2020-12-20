@@ -1,6 +1,6 @@
-#include "admin.h"
+#include "Admin.h"
 #include "Definitions.h"
-#include "seal_utilities_extra.h"
+#include "utilities/seal_utilities_extra.h"
 
 #include <iostream>
 #include <filesystem>
@@ -9,17 +9,17 @@
 
 void create_folders() {
 
-	std::filesystem::create_directories("data\\Admin\\CA");
-	std::filesystem::create_directories("data\\Admin\\SEAL");
+	std::filesystem::create_directories("data\\Admin\\CA");					// ADMIN_CA
+	std::filesystem::create_directories("data\\Admin\\SEAL");				// ADMIN_SEAL
 
-	std::filesystem::create_directories("data\\Clients");
+	std::filesystem::create_directories("data\\Clients");					// CLIENTS_FOLDERS
 
-	std::filesystem::create_directories("data\\Database\\certs\\clients");
-	std::filesystem::create_directories("data\\Database\\certs\\SEAL");
-	std::filesystem::create_directories("data\\Database\\tables");
+	std::filesystem::create_directories("data\\Database\\certs\\clients");	// DATABASE_CERTS + "clients"
+	std::filesystem::create_directories("data\\Database\\certs\\SEAL");		// DATABASE_CERTS + "SEAL"
+	std::filesystem::create_directories("data\\Database\\tables");			// DATABASE_TABLES
 
-	std::filesystem::create_directories("data\\swap");
-	std::filesystem::create_directories("data\\tmp");
+	std::filesystem::create_directories("data\\swap");						// SWAP_FOLDER
+	std::filesystem::create_directories("data\\tmp");						// TMP_FOLDER
 }
 
 void generate_SEAL() {

@@ -239,20 +239,18 @@
     </Xdcmake>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\archive.h" />
     <ClInclude Include="include\Definitions.h" />
-    <ClInclude Include="include\seal_utilities_extra.h" />
     <ClInclude Include="include\SQL_Client.h" />
-    <ClInclude Include="include\SQL_Command.h" />
     <ClInclude Include="include\SQL_Database.h" />
-    <ClInclude Include="include\test.h" />
+    <ClInclude Include="include\utilities\seal_utilities_extra.h" />
+    <ClInclude Include="include\utilities\SQL_Command.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp" />
-    <ClCompile Include="source\seal_utilities_extra.cpp" />
     <ClCompile Include="source\SQL_Client.cpp" />
-    <ClCompile Include="source\SQL_Command.cpp" />
     <ClCompile Include="source\SQL_Database.cpp" />
+    <ClCompile Include="source\utilities\seal_utilities_extra.cpp" />
+    <ClCompile Include="source\utilities\SQL_Command.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

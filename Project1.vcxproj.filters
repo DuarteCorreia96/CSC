@@ -9,18 +9,15 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="Header Files\utilities">
+      <UniqueIdentifier>{84e353fa-d0b7-411b-9f55-a0b65330fa55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utilities">
+      <UniqueIdentifier>{c0666581-996a-4907-b806-5142fbfb53e4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\SQL_Command.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\test.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\SQL_Database.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\archive.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\SQL_Client.h">
@@ -29,15 +26,15 @@
     <ClInclude Include="include\Definitions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\seal_utilities_extra.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\utilities\seal_utilities_extra.h">
+      <Filter>Header Files\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utilities\SQL_Command.h">
+      <Filter>Header Files\utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\SQL_Command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\SQL_Database.cpp">
@@ -46,8 +43,11 @@
     <ClCompile Include="source\SQL_Client.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\seal_utilities_extra.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\utilities\seal_utilities_extra.cpp">
+      <Filter>Source Files\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utilities\SQL_Command.cpp">
+      <Filter>Source Files\utilities</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

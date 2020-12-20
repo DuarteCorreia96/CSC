@@ -1,4 +1,4 @@
-#include "SQL_Command.h"
+#include "utilities/SQL_Command.h"
 
 #include <iostream>
 #include <stdlib.h>    

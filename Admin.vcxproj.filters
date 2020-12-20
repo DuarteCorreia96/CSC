@@ -13,26 +13,32 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\utilities">
+      <UniqueIdentifier>{2ccb235c-9dc2-4292-82be-b08e065684a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utilities">
+      <UniqueIdentifier>{ec4a2dad-1bb9-4d91-bc06-26f56054c12d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\admin_main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\seal_utilities_extra.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\Admin.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utilities\seal_utilities_extra.cpp">
+      <Filter>Source Files\utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Definitions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\seal_utilities_extra.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\utilities\seal_utilities_extra.h">
+      <Filter>Header Files\utilities</Filter>
     </ClInclude>
-    <ClInclude Include="include\admin.h">
+    <ClInclude Include="include\Admin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,6 +1,6 @@
 #include "Definitions.h"
-#include "seal_utilities_extra.h"
-#include "SQL_Command.h"
+#include "utilities/seal_utilities_extra.h"
+#include "utilities/SQL_Command.h"
 #include "SQL_Client.h"
 #include "SQL_Database.h"
 

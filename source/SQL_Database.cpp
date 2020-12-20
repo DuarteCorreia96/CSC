@@ -1,5 +1,5 @@
 #include "SQL_Database.h"
-#include "seal_utilities_extra.h"
+#include "utilities/seal_utilities_extra.h"
 
 #include <iostream>
 #include <filesystem>
@@ -278,7 +278,6 @@ void SQL_Database::delete_line(Json::Value command) {
 	response["valid"] = true;
 }
 
-
 void SQL_Database::select_line(Json::Value command) {
 
 	std::string tablename = command["table"].asString();
@@ -349,7 +348,6 @@ std::vector<seal::Ciphertext> SQL_Database::get_compare_vec(std::vector<std::str
 
 	return compare_vec;
 }
-
 
 void SQL_Database::select(Json::Value command) {
 

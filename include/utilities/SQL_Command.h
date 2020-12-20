@@ -77,6 +77,3 @@ public:
 	
 	Json::Value get_command_json() { return command_json; };
 };
-
-
-
