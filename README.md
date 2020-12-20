@@ -2,9 +2,9 @@
 
 ## Libraries needed
 
-1. Microsoft SEAL   - https://github.com/Microsoft/SEAL
-2. OpenSSL          - https://github.com/openssl/openssl
-3. JsonCpp          - https://github.com/open-source-parsers/jsoncpp
+1. [Microsoft SEAL](https://github.com/Microsoft/SEAL)
+2. [OpenSSL](https://github.com/openssl/openssl)
+3. [JsonCpp](https://github.com/open-source-parsers/jsoncpp)
 
 How to install them
 ===================
