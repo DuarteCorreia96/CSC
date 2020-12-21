@@ -30,7 +30,7 @@ seal::Ciphertext SQL_Client::get_random_enc() {
 
 	int x = uni(rng);
 	seal::Ciphertext x_enc{};
-	encryptor.encrypt(seal::Plaintext(std::to_string(x)), x_enc);
+	encryptor.encrypt(seal::Plaintext(int_to_hex(x)), x_enc);
 
 	return x_enc;
 }
@@ -55,33 +55,12 @@ Encrypted_int SQL_Client::encrypt_int(__int64 x) {
 	}
 
 	seal::Ciphertext x_enc_value{};
-	encryptor.encrypt(seal::Plaintext(std::to_string(x)), x_enc_value);
+	encryptor.encrypt(seal::Plaintext(int_to_hex(x)), x_enc_value);
 
 	x_enc.bin_vec = x_vec_enc;
 	x_enc.value   = x_enc_value;
 
 	return x_enc;
-}
-
-Decrypted_int SQL_Client::decrypt_int(Encrypted_int x_enc) {
-
-	Decrypted_int x_dec;
-
-	std::vector<int> x_vec_enc{};
-
-	x_dec.bin_vec.resize(N_BITS);
-
-	seal::Plaintext aux_plain;
-	for (size_t i = 0; i < N_BITS; i++) {
-
-		decryptor.decrypt(x_enc.bin_vec[i], aux_plain);
-		x_dec.bin_vec[i] = std::atoi(aux_plain.to_string().c_str());
-	}
-
-	decryptor.decrypt(x_enc.value, aux_plain);
-	x_dec.value = std::atoi(aux_plain.to_string().c_str());
-
-	return x_dec;
 }
 
 void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_enc, 
@@ -91,7 +70,6 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 	int column_width = 19;
 
 	// Print Header
-	std::cout << "All values from columns are printed in hexadecimal!" << std::endl << std::endl;
 	std::cout << column_string("ID", id_width) << "|";
 	for (int col = 0; col < table_enc[0].size(); col++) {
 		std::cout << column_string(columns[col], column_width) << "|";
@@ -115,7 +93,9 @@ void SQL_Client::print_table(std::vector<std::vector<seal::Ciphertext>> table_en
 		for (int col = 0; col < table_enc[0].size(); col++) {
 
 			decryptor.decrypt(table_enc[id][col], plain);
-			std::cout << column_string(plain.to_string(), column_width) << "|";
+
+			int value = hex_to_int(plain.to_string());
+			std::cout << column_string(std::to_string(value), column_width) << "|";
 
 		} std::cout << std::endl;
 	}
@@ -268,7 +248,8 @@ void SQL_Client::unpack_response() {
 		sum.load(context, in);
 		decryptor.decrypt(sum, plain);
 
-		std::cout << std::endl << "Sum is equal to:\t0x" << plain.to_string() << std::endl << std::endl << std::endl;
+		int sum_int = hex_to_int(plain.to_string());
+		std::cout << std::endl << "Sum is equal to:\t" << std::to_string(sum_int) << std::endl << std::endl << std::endl;
 	}
 
 	in.close();

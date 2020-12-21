@@ -48,13 +48,6 @@ private:
 	Encrypted_int encrypt_int(__int64 x);
 
 	/// <summary>
-	/// Derypts a Encrypted_int to a Decrypted_int in value and binary representation
-	/// </summary>
-	/// <param name="x">Encrypted_int to be decrypted.</param>
-	/// <returns>Decrypted_int</returns>
-	Decrypted_int decrypt_int(Encrypted_int x_enc);
-
-	/// <summary>
 	/// Prints table for SELECT command
 	/// </summary>
 	/// <param name="table_enc">Vector of vectors (Matrix) of the table values.</param>

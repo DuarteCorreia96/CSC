@@ -9,7 +9,7 @@
 #include <string>
 #include <json/json.h>
 #include <filesystem>
-
+#include <map>
 
 /// Class of the Database which is used to do encrypted arithmetic and comparisons using SEAL.
 ///	Table folder organization:
@@ -71,7 +71,8 @@ private:
 	std::vector<Encrypted_int> values;
 	seal::Ciphertext random;
 
-	__int64 ack_number = 0;
+	// Saves ack numbers from clients
+	std::map<std::string, __int64> ack_numbers{};
 
 	// Response of the Database to a request
 	Json::Value response;

@@ -19,17 +19,6 @@ typedef struct encrypted_int {
 
 } Encrypted_int;
 
-/// Structure used to save a int value and his binary representation.
-/// Fields:
-///		Value   - Integer value 
-///		bin_vec - Vector of Binary representation
-typedef struct Decrypted_int {
-
-	int value;
-	std::vector<int> bin_vec;
-
-} Decrypted_int;
-
 /// <summary>
 /// Initializes SEAL context based on settings on Definitions.h and BFV Scheme
 /// </summary>
@@ -51,6 +40,20 @@ seal::SecretKey load_SEAL_secret(seal::SEALContext context, std::string client_n
 /// <param name="client_name">client name of the key to load.</param>
 /// <returns></returns>
 seal::PublicKey load_SEAL_public(seal::SEALContext context, std::string client_name = "client");
+
+/// <summary>
+/// Transforms a hex number (string) into a int.
+/// </summary>
+/// <param name="hex_number">Hex value to be transformed</param>
+/// <returns>Int value of hex value entered</returns>
+int hex_to_int(std::string hex_number);
+
+/// <summary>
+/// Transforms a int into a hex value (string).
+/// </summary>
+/// <param name="decimal_int">Int value to be transformed</param>
+/// <returns>Hex string value of int value entered</returns>
+std::string int_to_hex(int decimal_int);
 
 /// <summary>
 /// Saves a Encrypted_int to a ofstream. First the value then the binary representation

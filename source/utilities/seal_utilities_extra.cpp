@@ -37,6 +37,24 @@ seal::PublicKey load_SEAL_public(seal::SEALContext context, std::string client_n
 	return public_key;
 }
 
+int hex_to_int(std::string hex_number) {
+
+	int out;
+	std::stringstream ss;
+	ss << hex_number;
+	ss >> std::hex >> out;
+
+	return out;
+}
+
+std::string int_to_hex(int decimal_int) {
+
+	std::stringstream ss;
+	ss << std::hex << decimal_int;
+
+	return ss.str();
+}
+
 void save_encripted(Encrypted_int x_enc, std::ofstream& out) {
 
 	x_enc.value.save(out);
