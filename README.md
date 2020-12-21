@@ -44,7 +44,7 @@ Run Software
 5. Unload Admin and Load Project1
 6. Run client by  pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
 7. Insert client name (see main_admin is possible to see that only the clients "admin" and "client" are created if more needed admin should be ran again with extra clients)
-8. Inserts requests to the database.
+8. Insert requests to the database.
 9. After compilation Admin and Database can be run from `.\x64\Release\Admin.exe` and databse `.\x64\Release\Project1.exe`
 
 It can also be externally compiled by using g++ with c++17 standard flag.
