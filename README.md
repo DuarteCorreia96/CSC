@@ -6,8 +6,8 @@
 2. [OpenSSL](https://github.com/openssl/openssl)
 3. [JsonCpp](https://github.com/open-source-parsers/jsoncpp)
 
-How to install them
-===================
+How to install
+==============
 
 Recommended way when using Visual Studio is with [Microsoft's vcpkg](https://github.com/Microsoft/vcpkg)
 
@@ -43,9 +43,12 @@ Run Software
 4. Run Admin by pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
 5. Unload Admin and Load Project1
 6. Run client by  pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
-7. Insert client name (see main_admin is possible to see that only the clients "admin" and "client" are created if more needed admin should be ran again with extra clients)
+7. Insert client name (in main_admin is possible to see that only the clients "admin" and "client" are created, if more are needed admin should be ran again with the extra clients)
 8. Insert requests to the database.
-9. After compilation Admin and Database can be run from `.\x64\Release\Admin.exe` and databse `.\x64\Release\Project1.exe`
+9. After compilation Admin can be run from `.\x64\Release\Admin.exe` and database from `.\x64\Release\Project1.exe`.
+
+GC++ Compilation
+================
 
 It can also be externally compiled by using g++ with c++17 standard flag.
 
