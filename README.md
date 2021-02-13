@@ -15,36 +15,36 @@ SEAL
 ----
 `.\vcpkg.exe install seal:x64-windows`
 
-SEAL is include folder should be installed on `vcpkg\installed\x64-windows\include\seal` 
-but sometimes it creates a parent directory `vcpkg\installed\x64-windows\include\SEAL-3-0\seal`
-simply pulling the seal directory to the correct place solves any include issues.
+SEAL's include folder should be installed on `vcpkg\installed\x64-windows\include\seal` 
+but it may create a parent directory `vcpkg\installed\x64-windows\include\SEAL-3-0\seal`. Moving the seal directory to the correct place should solve any include issues.
 
 OpenSSL
 -------
 `.\vcpkg.exe install openssl:x64-windows`
 
-OpenSSL sometimes is not configured on the path and it should be added (on windows through environment variables)
+OpenSSL may not be configured on PATH and it should be added (on windows through environment variables)
 
-Other bug may arise where it cannot find the openssl.cfg
-simply copy it from `\vcpkg\packages\openssl_x64-windows\tools\openssl` to `\vcpkg\packages\openssl_x64-windows`
+If openssl cannot find `openssl.cfg` moving it from `\vcpkg\packages\openssl_x64-windows\tools\openssl` to `\vcpkg\packages\openssl_x64-windows` solves the issue.
 
 JsonCpp
 -------
 `.\vcpkg.exe install jsoncpp:x64-windows`
 
-finally do `.\vcpkg.exe integrate install` to do integration with Visual Studio
+Integration with Visual Studio
+------------------------------
+`.\vcpkg.exe integrate install` 
 
 Run Software
 ============
 
 1. Launch solution (Homomorphic Database.sln) on Visual Studio 2019
-2. Open Solution Explorer: View -> Solution Explorer (or Ctrl + Alt + L) (should look like this https://imgur.com/d205DPn)
+2. Open Solution Explorer: View -> Solution Explorer (or Ctrl + Alt + L) (https://imgur.com/d205DPn)
 3. Unload Project 1 (https://imgur.com/tOUn872)
 4. Run Admin by pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
 5. Unload Admin and Load Project1
-6. Run client by  pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
+6. Run Client by  pressing on "Local Windows Debugger" (ensure that it is on Release and x64 mode https://imgur.com/dbS3lF5)
 7. Insert client name (in main_admin is possible to see that only the clients "admin" and "client" are created, if more are needed admin should be ran again with the extra clients)
-8. Insert requests to the database.
+8. Insert request to the database.
 9. After compilation Admin can be run from `.\x64\Release\Admin.exe` and database from `.\x64\Release\Project1.exe`.
 
 GC++ Compilation
